@@ -1,0 +1,93 @@
+PRAGMA foreign_keys = ON;
+
+BEGIN TRANSACTION;
+
+-- Archivo SQL para SQLite
+-- Estructura limpia y sencilla para usar desde C# (.NET 10 / Visual Studio Community 2026)
+-- Las columnas de fecha/hora usan texto en formato ISO 8601 (ej. "2025-11-17 09:30:00")
+-- No hay triggers ni lógica de permisos/roles en la base. Solo tablas y restricciones básicas.
+
+---------------------------------------------------------------------
+-- Tabla: pacientes
+---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS pacientes (
+    id_paciente        INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre_completo    TEXT    NOT NULL,
+    edad               INTEGER NOT NULL CHECK (edad >= 0),
+    sexo               TEXT    NOT NULL CHECK (sexo IN ('M','F','O')), -- M: masculino, F: femenino, O: otro
+    peso_kg            REAL    CHECK (peso_kg >= 0),
+    altura_m           REAL    CHECK (altura_m >= 0),
+    telefono           TEXT,
+    direccion          TEXT
+);
+
+---------------------------------------------------------------------
+-- Tabla: doctores
+---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS doctores (
+    id_doctor          INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre_completo    TEXT    NOT NULL,
+    edad               INTEGER CHECK (edad >= 0),
+    especialidad       TEXT,
+    cargo              TEXT
+);
+
+---------------------------------------------------------------------
+-- Tabla: horarios_doctor
+-- Nota: se recomienda almacenar fechas en formato ISO 8601 para comparación correcta.
+---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS horarios_doctor (
+    id_horario         INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_doctor          INTEGER NOT NULL,
+    inicio             TEXT    NOT NULL, -- "YYYY-MM-DD HH:MM:SS"
+    fin                TEXT    NOT NULL, -- "YYYY-MM-DD HH:MM:SS"
+    descripcion        TEXT,
+    FOREIGN KEY (id_doctor) REFERENCES doctores(id_doctor) ON DELETE CASCADE,
+    CHECK (inicio < fin) -- funciona si se usa formato ISO 8601
+);
+
+---------------------------------------------------------------------
+-- Tabla: citas
+---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS citas (
+    id_cita            INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_paciente        INTEGER NOT NULL,
+    id_doctor          INTEGER, -- puede ser NULL si aún no se asigna un doctor
+    fecha_hora         TEXT    NOT NULL, -- "YYYY-MM-DD HH:MM:SS"
+    duracion_minutos   INTEGER NOT NULL CHECK (duracion_minutos > 0),
+    estado             TEXT    NOT NULL CHECK (estado IN (
+                           'programada', 'confirmada', 'completada', 'cancelada', 'pendiente'
+                       )),
+    motivo             TEXT,
+    FOREIGN KEY (id_paciente) REFERENCES pacientes(id_paciente) ON DELETE CASCADE,
+    FOREIGN KEY (id_doctor)   REFERENCES doctores(id_doctor)   ON DELETE SET NULL
+);
+
+---------------------------------------------------------------------
+-- Tabla: resultados_laboratorio
+---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS resultados_laboratorio (
+    id_resultado       INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_paciente        INTEGER NOT NULL,
+    tipo_examen        TEXT    NOT NULL,
+    resultado          TEXT,
+    fecha              TEXT    NOT NULL, -- "YYYY-MM-DD" o "YYYY-MM-DD HH:MM:SS"
+    estado             TEXT    NOT NULL CHECK (estado IN ('pendiente','listo','cancelado')),
+    id_cita_relacionada INTEGER, -- opcional, puede ser NULL
+    FOREIGN KEY (id_paciente) REFERENCES pacientes(id_paciente) ON DELETE CASCADE,
+    FOREIGN KEY (id_cita_relacionada) REFERENCES citas(id_cita) ON DELETE SET NULL
+);
+
+---------------------------------------------------------------------
+-- Tabla: usuarios (gestión de acceso será manejada por la aplicación C#)
+-- Nota: almacenar solo hash de contraseña (no contraseñas en texto plano).
+---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS usuarios (
+    id_usuario         INTEGER PRIMARY KEY AUTOINCREMENT,
+    username           TEXT    NOT NULL UNIQUE,
+    password_hash      TEXT    NOT NULL, -- almacenar hash (ej. bcrypt/Argon2) desde la app
+    rol                TEXT    NOT NULL CHECK (rol IN ('superadmin','personal_admin','doctor','laboratorio')),
+    nombre_completo    TEXT    NOT NULL
+);
+
+COMMIT;
