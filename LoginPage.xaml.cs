@@ -1,7 +1,7 @@
 ﻿// PASO 1: Importamos las librerías nuevas
-using MediSync.Models; // Usar las clases que creamos
+using MediSync.Models; 
 using System.Net.Http;
-using System.Net.Http.Json; // El paquete que instalamos
+using System.Net.Http.Json; 
 using System.Text.Json; 
 
 namespace MediSync
@@ -20,7 +20,7 @@ namespace MediSync
 
         // 2. ¡LA URL DE ROBERTO! (Versión Windows)
         //    Como tu app corre en Windows, SÍ puedes usar localhost.
-        private readonly string _apiUrl = "http://localhost:5069";
+        private readonly string _apiUrl = "http://localhost:7151";
 
 
         public LoginPage()
@@ -135,4 +135,5 @@ namespace MediSync
             DisplayAlert("Info", "Sección 'Olvidé Contraseña' en construcción.", "OK");
         }
     }
+
 }
