@@ -1,21 +1,54 @@
-﻿<?xml version = "1.0" encoding = "UTF-8" ?>
+<?xml version = "1.0" encoding = "UTF-8" ?>
 <Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:MediSync"
              x:Class="MediSync.App">
-    
     <Application.Resources>
-    <ResourceDictionary>
-        <Color x:Key="Primary">#00ADB5</Color> <Color x:Key="Secondary">#39424E</Color> <Color x:Key="DarkBackground">#222831</Color> <Color x:Key="Accent">#FF5722</Color> <Style TargetType="Frame" x:Key="EntryFrameStyle">
-            <Setter Property="BackgroundColor" Value="#30ffffff" /> <Setter Property="BorderColor" Value="Transparent" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="HasShadow" Value="False" />
-            <Setter Property="Padding" Value="0" /> </Style>
+        <ResourceDictionary>
+            
+            <!-- PALETA DE COLORES CLINICAL CLEAN -->
+            <Color x:Key="MediCyan">#00B2CA</Color>
+            <Color x:Key="MediDarkGray">#333333</Color>
+            <Color x:Key="MediMediumGray">#888888</Color>
+            <Color x:Key="MediLightGray">#F5F7FA</Color>
+            <Color x:Key="MediWhite">#FFFFFF</Color>
+            <Color x:Key="MediRed">#E57373</Color>
+            <Color x:Key="MediGreen">#81C784</Color>
 
-        <Style TargetType="Entry" x:Key="EntryTextStyle">
-            <Setter Property="FontSize" Value="16" />
-            <Setter Property="Margin" Value="10,0" /> </Style>
+            <!-- ESTILOS GLOBALES -->
+            
+            <!-- Labels -->
+            <Style TargetType="Label">
+                <Setter Property="TextColor" Value="{StaticResource MediDarkGray}" />
+            </Style>
+            
+            <!-- Botones con bordes redondeados -->
+            <Style TargetType="Button">
+                <Setter Property="BackgroundColor" Value="{StaticResource MediCyan}" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="CornerRadius" Value="20" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="Padding" Value="20,10" />
+                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <VisualStateGroupList>
+                        <VisualStateGroup x:Name="CommonStates">
+                            <VisualState x:Name="Normal" />
+                            <VisualState x:Name="Pressed">
+                                <VisualState.Setters>
+                                    <Setter Property="Opacity" Value="0.8" />
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateGroupList>
+                </Setter>
+            </Style>
+
+            <!-- Inputs dentro de Bordes -->
+            <Style TargetType="Entry">
+                <Setter Property="TextColor" Value="{StaticResource MediDarkGray}" />
+                <Setter Property="PlaceholderColor" Value="{StaticResource MediMediumGray}" />
+            </Style>
 
         </ResourceDictionary>
-</Application.Resources>
+    </Application.Resources>
 </Application>
