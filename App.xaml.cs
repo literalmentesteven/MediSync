@@ -1,16 +1,22 @@
-﻿namespace MediSync; // (O el nombre de tu app, ej: MiAppMaui)
+using MediSync.Views;
+
+namespace MediSync;
 
 public partial class App : Application
 {
-    public App()
+    // Proveedor de servicios para resolver dependencias manualmente si es necesario en el arranque
+    public static IServiceProvider Services;
+
+    public App(IServiceProvider provider)
     {
         InitializeComponent();
+        Services = provider;
     }
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        // ESTA ES LA LÍNEA QUE CAMBIAS
-        // Antes decía: return new Window(new AppShell());
-        return new Window(new LoginPage());
+        // Iniciamos siempre en el Login
+        var loginPage = Services.GetService<LoginPage>();
+        return new Window(loginPage ?? new LoginPage());
     }
 }
