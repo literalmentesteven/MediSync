@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:MediSync.Models"
+             x:Class="MediSync.Views.SchedulePage"
+             Title="Horarios"
+             BackgroundColor="{StaticResource MediLightGray}"
+             Loaded="OnPageLoaded">
+
+    <Grid ColumnDefinitions="4*, 6*" Padding="20" ColumnSpacing="30">
+
+        <!-- COLUMNA IZQUIERDA: CALENDARIO -->
+        <Border Grid.Column="0" BackgroundColor="White" StrokeShape="RoundRectangle 20" Padding="20" VerticalOptions="Fill">
+            <Border.Shadow><Shadow Brush="Black" Opacity="0.05" Radius="10"/></Border.Shadow>
+            
+            <Grid RowDefinitions="Auto, Auto, *">
+                
+                <!-- HEADER MES -->
+                <Grid ColumnDefinitions="40, *, 40" Margin="0,0,0,20">
+                    <Button Grid.Column="0" Text="&lt;" Clicked="PrevMonth" BackgroundColor="Transparent" TextColor="{StaticResource MediDarkGray}" FontSize="24" FontAttributes="Bold" Padding="0"/>
+                    <Label Grid.Column="1" x:Name="LblCurrentMonth" Text="MES" FontSize="18" FontAttributes="Bold" TextColor="{StaticResource MediCyan}" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    <Button Grid.Column="2" Text="&gt;" Clicked="NextMonth" BackgroundColor="Transparent" TextColor="{StaticResource MediDarkGray}" FontSize="24" FontAttributes="Bold" Padding="0"/>
+                </Grid>
+
+                <!-- DÍAS SEMANA -->
+                <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*,*,*,*" Margin="0,0,0,10">
+                    <Label Text="D" HorizontalOptions="Center" TextColor="{StaticResource MediMediumGray}" Grid.Column="0"/>
+                    <Label Text="L" HorizontalOptions="Center" TextColor="{StaticResource MediMediumGray}" Grid.Column="1"/>
+                    <Label Text="M" HorizontalOptions="Center" TextColor="{StaticResource MediMediumGray}" Grid.Column="2"/>
+                    <Label Text="M" HorizontalOptions="Center" TextColor="{StaticResource MediMediumGray}" Grid.Column="3"/>
+                    <Label Text="J" HorizontalOptions="Center" TextColor="{StaticResource MediMediumGray}" Grid.Column="4"/>
+                    <Label Text="V" HorizontalOptions="Center" TextColor="{StaticResource MediMediumGray}" Grid.Column="5"/>
+                    <Label Text="S" HorizontalOptions="Center" TextColor="{StaticResource MediMediumGray}" Grid.Column="6"/>
+                </Grid>
+
+                <!-- GRID DÍAS -->
+                <CollectionView x:Name="CalendarGrid" Grid.Row="2" SelectionMode="Single" SelectionChanged="OnDaySelected">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="7" VerticalItemSpacing="5" HorizontalItemSpacing="5"/>
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border StrokeShape="RoundRectangle 20" BackgroundColor="{Binding BgColor}" StrokeThickness="0" HeightRequest="40" WidthRequest="40">
+                                <Label Text="{Binding DayNumber}" TextColor="{Binding TextColor}" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold"/>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Grid>
+        </Border>
+
+        <!-- COLUMNA DERECHA: CITAS -->
+        <Grid Grid.Column="1" RowDefinitions="Auto, *">
+            <Label x:Name="LblSelectedDate" Text="Selecciona un día" FontSize="24" FontAttributes="Bold" TextColor="{StaticResource MediDarkGray}" Margin="0,0,0,20"/>
+            
+            <CollectionView x:Name="DailyAppointmentsList" Grid.Row="1">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
+                        <Label Text="📅" FontSize="40" HorizontalOptions="Center"/>
+                        <Label Text="No hay citas programadas para este día." TextColor="{StaticResource MediMediumGray}"/>
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+                
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Paciente">
+                        <Border Margin="0,0,0,15" Padding="20" BackgroundColor="White" StrokeShape="RoundRectangle 15" StrokeThickness="0">
+                            <Border.Shadow>
+                                <Shadow Brush="Black" Opacity="0.05" Radius="5" Offset="0,2"/>
+                            </Border.Shadow>
+                            
+                            <Grid ColumnDefinitions="Auto, *">
+                                <!-- HORA -->
+                                <Border BackgroundColor="{StaticResource MediLightGray}" StrokeShape="RoundRectangle 10" Padding="15" StrokeThickness="0" VerticalOptions="Center" WidthRequest="80">
+                                    <Label Text="{Binding HoraCita, StringFormat='{0:HH:mm}'}" TextColor="{StaticResource MediCyan}" FontAttributes="Bold" FontSize="18" HorizontalOptions="Center"/>
+                                </Border>
+                                
+                                <!-- DATOS CITA -->
+                                <VerticalStackLayout Grid.Column="1" Margin="20,0,0,0" VerticalOptions="Center" Spacing="5">
+                                    <!-- Nombre Paciente -->
+                                    <Label Text="{Binding NombreCompleto}" FontSize="18" FontAttributes="Bold" TextColor="{StaticResource MediDarkGray}"/>
+                                    
+                                    <!-- NUEVO: DOCTOR ASIGNADO -->
+                                    <HorizontalStackLayout Spacing="5">
+                                        <Label Text="🩺" FontSize="14" VerticalOptions="Center"/>
+                                        <Label Text="{Binding DoctorAsignado, TargetNullValue='Sin asignar'}" TextColor="{StaticResource MediDarkGray}" FontSize="14" FontAttributes="Bold" VerticalOptions="Center"/>
+                                    </HorizontalStackLayout>
+
+                                    <!-- Estado -->
+                                    <Label Text="{Binding EstadoCita}" TextColor="{Binding EstadoColor}" FontSize="12" FontAttributes="Italic"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
+    </Grid>
+</ContentPage>

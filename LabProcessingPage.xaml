@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:MediSync.Models"
+             x:Class="MediSync.Views.LabProcessingPage"
+             Title="Gestión de Laboratorio"
+             BackgroundColor="{StaticResource MediLightGray}"
+             Loaded="OnPageLoaded">
+
+    <Grid ColumnDefinitions="4*, 6*" Padding="20" ColumnSpacing="20">
+
+        <!-- LISTA PENDIENTES -->
+        <Grid Grid.Column="0" RowDefinitions="Auto, *">
+            <Label Text="Muestras Pendientes" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource MediDarkGray}" Margin="0,0,0,10"/>
+            <CollectionView x:Name="PendingList" Grid.Row="1" SelectionMode="Single" SelectionChanged="OnExamSelected">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Examen">
+                        <Border Margin="0,0,0,10" Padding="15" BackgroundColor="White" StrokeShape="RoundRectangle 10" StrokeThickness="0">
+                            <Grid ColumnDefinitions="Auto, *">
+                                <BoxView Color="Red" WidthRequest="5" VerticalOptions="Fill" IsVisible="{Binding EsUrgente}" Margin="0,0,10,0"/>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                    <Label Text="{Binding TipoExamen}" FontAttributes="Bold" TextColor="{StaticResource MediDarkGray}"/>
+                                    <Label Text="{Binding PacienteNombre}" TextColor="{StaticResource MediMediumGray}"/>
+                                    <Label Text="{Binding NombreDoctor}" TextColor="{StaticResource MediCyan}" FontSize="11"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
+
+        <!-- PANEL PROCESAMIENTO -->
+        <Border Grid.Column="1" BackgroundColor="White" StrokeShape="RoundRectangle 10" Padding="30" StrokeThickness="0">
+            <Grid x:Name="WorkPanel" IsVisible="False" RowDefinitions="Auto, *, Auto">
+                
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="PROCESAMIENTO DE MUESTRA" TextColor="{StaticResource MediCyan}" FontAttributes="Bold"/>
+                    <Label x:Name="LblWorkTitle" Text="Hemograma - Juan Perez" FontSize="18" TextColor="{StaticResource MediDarkGray}" FontAttributes="Bold"/>
+                    <Label x:Name="LblDrRequest" Text="Solicitado por: Dr. X" FontSize="12" TextColor="Gray"/>
+                </VerticalStackLayout>
+
+                <ScrollView Grid.Row="1" Margin="0,20">
+                    <VerticalStackLayout Spacing="20">
+                        <!-- INGRESO MANUAL -->
+                        <VerticalStackLayout>
+                            <Label Text="Ingreso Manual de Resultados" FontSize="12" TextColor="{StaticResource MediMediumGray}"/>
+                            <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" HeightRequest="150" Padding="10">
+                                <Editor x:Name="TxtResultados" Placeholder="Ej: Glucosa: 90 mg/dL..." TextColor="{StaticResource MediDarkGray}" AutoSize="TextChanges"/>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- SUBIR PDF -->
+                        <VerticalStackLayout>
+                            <Label Text="Adjuntar PDF Oficial" FontSize="12" TextColor="{StaticResource MediMediumGray}"/>
+                            <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeDashArray="5,5" BackgroundColor="#F9F9F9" Padding="20" HeightRequest="80">
+                                <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="10">
+                                    <Button Text="📂 Seleccionar Archivo PDF" BackgroundColor="{StaticResource MediDarkGray}" TextColor="White" Clicked="OnUploadPdfClicked"/>
+                                    <Label x:Name="LblFileName" Text="Ningún archivo seleccionado" VerticalOptions="Center" TextColor="Gray"/>
+                                </HorizontalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
+                        
+                        <HorizontalStackLayout Spacing="10">
+                            <CheckBox x:Name="CheckCritico" Color="Red"/>
+                            <Label Text="VALOR CRÍTICO (Alerta Inmediata)" TextColor="Red" VerticalOptions="Center" FontAttributes="Bold"/>
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                </ScrollView>
+
+                <Button Grid.Row="2" Text="Finalizar y Enviar al Doctor" BackgroundColor="{StaticResource MediCyan}" TextColor="White" Clicked="OnSubmitResult"/>
+            </Grid>
+        </Border>
+
+    </Grid>
+</ContentPage>

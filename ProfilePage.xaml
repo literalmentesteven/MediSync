@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:helpers="clr-namespace:MediSync.Helpers"
+             x:Class="MediSync.Views.ProfilePage"
+             Title="Mi Perfil"
+             BackgroundColor="{StaticResource MediLightGray}"
+             Loaded="OnPageLoaded">
+
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Spacing="25" Padding="30" VerticalOptions="Center" HorizontalOptions="Center">
+
+                <!-- TARJETA DE PERFIL -->
+                <Border BackgroundColor="White" StrokeShape="RoundRectangle 20" Padding="40" WidthRequest="400">
+                    <Border.Shadow>
+                        <Shadow Brush="Black" Opacity="0.1" Radius="15" Offset="0,5"/>
+                    </Border.Shadow>
+                    
+                    <VerticalStackLayout Spacing="20">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <Border HeightRequest="100" WidthRequest="100" StrokeShape="RoundRectangle 50" BackgroundColor="{StaticResource MediCyan}" StrokeThickness="0" HorizontalOptions="Center">
+                                <Label x:Name="LblAvatar" Text="JP" TextColor="White" FontSize="40" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold"/>
+                            </Border>
+                            <Button Grid.Column="1" Text="✎" BackgroundColor="Transparent" TextColor="{StaticResource MediMediumGray}" FontSize="20" VerticalOptions="Start" Clicked="OnEditProfileClicked"/>
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="5">
+                            <Label x:Name="LblNombre" Text="Cargando..." FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{StaticResource MediDarkGray}"/>
+                            <Label x:Name="LblRol" Text="..." TextColor="{StaticResource MediCyan}" FontSize="16" HorizontalOptions="Center" FontAttributes="Bold"/>
+                            <Label x:Name="LblId" Text="ID: ..." TextColor="{StaticResource MediMediumGray}" FontSize="14" HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+
+                        <BoxView HeightRequest="1" Color="{StaticResource MediLightGray}" Margin="0,10"/>
+
+                        <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto, Auto, Auto" RowSpacing="15" ColumnSpacing="15">
+                            <Label Grid.Row="0" Grid.Column="0" Text="Edad:" FontAttributes="Bold" TextColor="{StaticResource MediMediumGray}"/>
+                            <Label Grid.Row="0" Grid.Column="1" x:Name="LblEdad" Text="--" TextColor="{StaticResource MediDarkGray}"/>
+                            <Label Grid.Row="1" Grid.Column="0" Text="Nacimiento:" FontAttributes="Bold" TextColor="{StaticResource MediMediumGray}"/>
+                            <Label Grid.Row="1" Grid.Column="1" x:Name="LblNacimiento" Text="--" TextColor="{StaticResource MediDarkGray}"/>
+                            <Label Grid.Row="2" Grid.Column="0" Text="Contacto:" FontAttributes="Bold" TextColor="{StaticResource MediMediumGray}"/>
+                            <Label Grid.Row="2" Grid.Column="1" x:Name="LblContacto" Text="--" TextColor="{StaticResource MediDarkGray}"/>
+                            <Label Grid.Row="3" Grid.Column="0" x:Name="LblTitleEspecialidad" Text="Especialidad:" FontAttributes="Bold" TextColor="{StaticResource MediMediumGray}" IsVisible="False"/>
+                            <Label Grid.Row="3" Grid.Column="1" x:Name="LblEspecialidad" Text="--" TextColor="{StaticResource MediDarkGray}" IsVisible="False"/>
+                            <Label Grid.Row="4" Grid.Column="0" Text="Info:" FontAttributes="Bold" TextColor="{StaticResource MediMediumGray}" VerticalOptions="Start"/>
+                            <Label Grid.Row="4" Grid.Column="1" x:Name="LblInfo" Text="--" TextColor="{StaticResource MediDarkGray}" LineBreakMode="WordWrap"/>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Button x:Name="BtnCrearUsuario" Text="+ Crear Nuevo Usuario" BackgroundColor="{StaticResource MediDarkGray}" Clicked="OnCreateUserClicked" IsVisible="False" WidthRequest="400" HeightRequest="50"/>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- MODAL EDITAR -->
+        <Grid x:Name="EditProfileModal" BackgroundColor="#80000000" IsVisible="False" Padding="0">
+            <Border BackgroundColor="White" WidthRequest="400" VerticalOptions="Center" HorizontalOptions="Center" Padding="30">
+                <Border.StrokeShape><RoundRectangle CornerRadius="20"/></Border.StrokeShape>
+                <VerticalStackLayout Spacing="15">
+                    <Label Text="Editar Mi Perfil" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource MediCyan}"/>
+                    <Label Text="Solo puedes editar contacto e info." FontSize="12" TextColor="{StaticResource MediMediumGray}"/>
+                    
+                    <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                        <Entry x:Name="TxtEditContacto" Placeholder="Teléfono / Contacto" TextColor="{StaticResource MediDarkGray}" Margin="10,0" VerticalOptions="Center"/>
+                    </Border>
+                    
+                    <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="100">
+                        <Editor x:Name="TxtEditInfo" Placeholder="Información (Biografía)" TextColor="{StaticResource MediDarkGray}" Margin="10,10"/>
+                    </Border>
+                    
+                    <Entry x:Name="TxtEditFotoUrl" Placeholder="URL Foto (Opcional)" TextColor="{StaticResource MediDarkGray}" IsVisible="False"/> 
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="15" Margin="0,10,0,0">
+                        <Button Text="Cancelar" BackgroundColor="{StaticResource MediMediumGray}" Clicked="CloseEditModal"/>
+                        <Button Text="Guardar" BackgroundColor="{StaticResource MediCyan}" Clicked="SaveProfile"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <!-- MODAL CREAR USUARIO -->
+        <Grid x:Name="CreateUserModal" BackgroundColor="#80000000" IsVisible="False" Padding="0">
+            <Border BackgroundColor="White" WidthRequest="450" VerticalOptions="Center" HorizontalOptions="Center" Padding="30">
+                <Border.StrokeShape><RoundRectangle CornerRadius="20"/></Border.StrokeShape>
+                
+                <!-- HEIGHT AUMENTADO A 600 PARA VER MAS CAMPOS -->
+                <Grid RowDefinitions="Auto, *, Auto" RowSpacing="20" HeightRequest="600">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <Label Text="Registrar Nuevo Personal" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource MediCyan}" VerticalOptions="Center"/>
+                        <Button Grid.Column="1" Text="✕" TextColor="{StaticResource MediMediumGray}" BackgroundColor="Transparent" FontSize="20" WidthRequest="40" HeightRequest="40" Padding="0" Clicked="CloseCreateModal"/>
+                    </Grid>
+                    
+                    <!-- SCROLLVIEW CON BARRA VISIBLE -->
+                    <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Always">
+                        <VerticalStackLayout Spacing="15" Padding="0,0,10,0">
+                            
+                            <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                                <Entry x:Name="NewUserNombre" Placeholder="Nombre Completo" TextColor="{StaticResource MediDarkGray}" Margin="10,0" VerticalOptions="Center"/>
+                            </Border>
+                            
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="20">
+                                <Border Grid.Column="0" Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                                    <DatePicker x:Name="NewUserFecha" TextColor="{StaticResource MediDarkGray}" HorizontalOptions="Fill" Margin="10,0" VerticalOptions="Center"/>
+                                </Border>
+                                
+                                <Border Grid.Column="1" Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60" Padding="10,0">
+                                    <Picker x:Name="NewUserRol" Title="Rol" TextColor="{StaticResource MediDarkGray}" TitleColor="{StaticResource MediMediumGray}" HorizontalOptions="Fill" SelectedIndexChanged="OnRoleChanged" VerticalOptions="Center">
+                                        <Picker.Items><x:String>Doctor</x:String><x:String>Laboratorio</x:String><x:String>Administrador</x:String></Picker.Items>
+                                    </Picker>
+                                </Border>
+                            </Grid>
+
+                            <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60" IsVisible="False" x:Name="BorderEspecialidad">
+                                <Entry x:Name="NewUserEspecialidad" Placeholder="Especialidad (Cardiología, etc.)" TextColor="{StaticResource MediDarkGray}" Margin="10,0" VerticalOptions="Center"/>
+                            </Border>
+
+                            <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                                <Entry x:Name="NewUserPass" Placeholder="Contraseña" IsPassword="True" TextColor="{StaticResource MediDarkGray}" Margin="10,0" VerticalOptions="Center"/>
+                            </Border>
+                            <Label Text="Mínimo 8 caracteres, 1 mayúscula, 1 número." FontSize="10" TextColor="{StaticResource MediMediumGray}" Margin="5,-10,0,0"/>
+
+                            <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                                <Entry x:Name="NewUserContacto" Placeholder="Teléfono" TextColor="{StaticResource MediDarkGray}" Margin="10,0" VerticalOptions="Center"/>
+                            </Border>
+                            <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                                <Entry x:Name="NewUserInfo" Placeholder="Información Adicional (Bio)" TextColor="{StaticResource MediDarkGray}" Margin="10,0" VerticalOptions="Center"/>
+                            </Border>
+                        </VerticalStackLayout>
+                    </ScrollView>
+
+                    <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="15" Margin="0,10,0,0">
+                        <Button Text="Cancelar" BackgroundColor="{StaticResource MediMediumGray}" Clicked="CloseCreateModal"/>
+                        <Button Text="Crear Usuario" BackgroundColor="{StaticResource MediDarkGray}" Clicked="SubmitNewUser"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentPage>

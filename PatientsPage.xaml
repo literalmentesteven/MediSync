@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:MediSync.Models"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             x:Class="MediSync.Views.PatientsPage"
+             Title="Gestión de Pacientes"
+             BackgroundColor="{StaticResource MediLightGray}"
+             Loaded="OnPageLoaded">
+
+    <Grid>
+        <!-- CONTENIDO PRINCIPAL -->
+        <Grid ColumnDefinitions="3.5*, 6.5*" Padding="20" ColumnSpacing="20">
+
+            <!-- COLUMNA IZQUIERDA -->
+            <Grid Grid.Column="0" RowDefinitions="Auto, Auto, *">
+                <Button x:Name="BtnAddPatient" Text="+ Nuevo Paciente" BackgroundColor="{StaticResource MediDarkGray}" Margin="0,0,0,10" Clicked="OnAddPatientClicked" IsVisible="False"/>
+                <Border Grid.Row="1" StrokeShape="RoundRectangle 15" StrokeThickness="0" BackgroundColor="White" Margin="0,0,0,15" HeightRequest="50">
+                    <Entry x:Name="SearchBar" Placeholder="Buscar paciente..." Margin="10,0" TextChanged="OnSearchTextChanged" TextColor="{StaticResource MediDarkGray}"/>
+                </Border>
+                <CollectionView x:Name="PatientsList" Grid.Row="2" SelectionMode="Single" SelectionChanged="OnPatientSelected">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:Paciente">
+                            <Border Margin="0,0,0,10" Padding="15" BackgroundColor="White" StrokeThickness="0">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup Name="CommonStates">
+                                        <VisualState Name="Selected"><VisualState.Setters><Setter Property="BackgroundColor" Value="#E0F7FA" /></VisualState.Setters></VisualState>
+                                        <VisualState Name="Normal" />
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <Border.StrokeShape><RoundRectangle CornerRadius="15"/></Border.StrokeShape>
+                                <Border.Shadow><Shadow Brush="Black" Opacity="0.05" Radius="5" Offset="0,2"/></Border.Shadow>
+                                <Grid ColumnDefinitions="Auto, *">
+                                    <BoxView Color="{Binding EstadoColor}" HeightRequest="10" WidthRequest="10" CornerRadius="5" VerticalOptions="Center" Margin="0,0,10,0"/>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                        <Label Text="{Binding NombreCompleto}" FontAttributes="Bold" FontSize="16" LineBreakMode="TailTruncation" TextColor="{StaticResource MediDarkGray}"/>
+                                        <Label Text="{Binding HoraCita, StringFormat='{0:hh:mm tt}'}" TextColor="{StaticResource MediMediumGray}" FontSize="12" IsVisible="{Binding TieneCita}"/>
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Grid>
+
+            <!-- COLUMNA DERECHA -->
+            <Border Grid.Column="1" BackgroundColor="White" StrokeThickness="0" Padding="0">
+                <Border.StrokeShape><RoundRectangle CornerRadius="20"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Black" Opacity="0.1" Radius="10" Offset="0,5"/></Border.Shadow>
+                <Grid>
+                    <Grid x:Name="DetailPanel" RowDefinitions="Auto, *, Auto" IsVisible="False" Padding="30">
+                        <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,20">
+                            <HorizontalStackLayout Spacing="20" VerticalOptions="Center">
+                                <Border HeightRequest="80" WidthRequest="80" StrokeShape="RoundRectangle 40" BackgroundColor="{StaticResource MediCyan}" StrokeThickness="0">
+                                    <Label x:Name="LblIniciales" Text="JP" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="30" FontAttributes="Bold"/>
+                                </Border>
+                                <VerticalStackLayout VerticalOptions="Center">
+                                    <Label x:Name="LblNombre" Text="Nombre" FontSize="24" FontAttributes="Bold" TextColor="{StaticResource MediDarkGray}"/>
+                                    <Label x:Name="LblIdLegal" Text="ID: 000" TextColor="{StaticResource MediMediumGray}"/>
+                                </VerticalStackLayout>
+                            </HorizontalStackLayout>
+                            <HorizontalStackLayout Grid.Column="1" Spacing="10">
+                                <Button x:Name="BtnHistory" Text="📝 Historial" HeightRequest="35" FontSize="12" Padding="15,0" BackgroundColor="#FF9800" TextColor="White" Clicked="OnHistoryClicked"/>
+                                <Button Text="📅 Agendar Cita" HeightRequest="35" FontSize="12" Padding="15,0" BackgroundColor="{StaticResource MediCyan}" TextColor="White" Clicked="OnNewAppointmentClicked"/>
+                                <Button x:Name="BtnEditPatient" Text="✎ Editar" HeightRequest="35" FontSize="12" Padding="10,0" BackgroundColor="{StaticResource MediMediumGray}" Clicked="OnEditPatientClicked"/>
+                            </HorizontalStackLayout>
+                        </Grid>
+                        <ScrollView Grid.Row="1">
+                            <VerticalStackLayout Spacing="25">
+                                <Border BackgroundColor="#E0F7FA" StrokeThickness="0" Padding="15" StrokeShape="RoundRectangle 10">
+                                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                                        <Label Text="🩺" FontSize="20"/>
+                                        <Label Text="Atendido por:" TextColor="{StaticResource MediCyan}" FontAttributes="Bold" VerticalOptions="Center"/>
+                                        <Label x:Name="LblDoctorAsignado" Text="--" TextColor="{StaticResource MediDarkGray}" VerticalOptions="Center" FontAttributes="Bold"/>
+                                    </HorizontalStackLayout>
+                                </Border>
+                                <Border x:Name="BadgeEstado" BackgroundColor="#F5F5F5" Padding="15,5" StrokeShape="RoundRectangle 10" HorizontalOptions="Start">
+                                    <Label x:Name="LblEstado" Text="SIN CITA" TextColor="Gray" FontAttributes="Bold" FontSize="14"/>
+                                </Border>
+                                <FlexLayout JustifyContent="SpaceBetween">
+                                    <Border BackgroundColor="{StaticResource MediLightGray}" StrokeThickness="0" Padding="20,15" StrokeShape="RoundRectangle 10" WidthRequest="100">
+                                        <VerticalStackLayout HorizontalOptions="Center">
+                                            <Label Text="Edad" FontSize="12" TextColor="{StaticResource MediMediumGray}"/>
+                                            <Label x:Name="LblEdad" Text="--" FontSize="18" FontAttributes="Bold" TextColor="{StaticResource MediCyan}"/>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                    <Border BackgroundColor="{StaticResource MediLightGray}" StrokeThickness="0" Padding="20,15" StrokeShape="RoundRectangle 10" WidthRequest="100">
+                                        <VerticalStackLayout HorizontalOptions="Center">
+                                            <Label Text="Peso (kg)" FontSize="12" TextColor="{StaticResource MediMediumGray}"/>
+                                            <Label x:Name="LblPeso" Text="--" FontSize="18" FontAttributes="Bold" TextColor="{StaticResource MediCyan}"/>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                    <Border BackgroundColor="{StaticResource MediLightGray}" StrokeThickness="0" Padding="20,15" StrokeShape="RoundRectangle 10" WidthRequest="100">
+                                        <VerticalStackLayout HorizontalOptions="Center">
+                                            <Label Text="Altura (m)" FontSize="12" TextColor="{StaticResource MediMediumGray}"/>
+                                            <Label x:Name="LblAltura" Text="--" FontSize="18" FontAttributes="Bold" TextColor="{StaticResource MediCyan}"/>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </FlexLayout>
+                                <BoxView HeightRequest="1" Color="{StaticResource MediLightGray}"/>
+                                <Grid RowDefinitions="Auto, Auto, Auto" ColumnDefinitions="Auto, *" RowSpacing="15" ColumnSpacing="20">
+                                    <Label Grid.Row="0" Grid.Column="0" Text="Sexo:" FontAttributes="Bold" TextColor="{StaticResource MediMediumGray}"/>
+                                    <Label Grid.Row="0" Grid.Column="1" x:Name="LblSexo" Text="--" TextColor="{StaticResource MediDarkGray}"/>
+                                    <Label Grid.Row="1" Grid.Column="0" Text="Dirección:" FontAttributes="Bold" TextColor="{StaticResource MediMediumGray}"/>
+                                    <Label Grid.Row="1" Grid.Column="1" x:Name="LblDireccion" Text="--" TextColor="{StaticResource MediDarkGray}"/>
+                                    <Label Grid.Row="2" Grid.Column="0" Text="Contacto:" FontAttributes="Bold" TextColor="{StaticResource MediMediumGray}"/>
+                                    <Label Grid.Row="2" Grid.Column="1" x:Name="LblTelefono" Text="--" TextColor="{StaticResource MediDarkGray}"/>
+                                </Grid>
+                            </VerticalStackLayout>
+                        </ScrollView>
+                        <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="15" Margin="0,20,0,0">
+                            <Button Grid.Column="0" x:Name="BtnAusente" Text="MARCAR AUSENTE" BackgroundColor="#FFEBEE" TextColor="#D32F2F" Clicked="OnAusenteClicked" HeightRequest="50"/>
+                            <Button Grid.Column="1" x:Name="BtnAsistio" Text="CONFIRMAR ASISTENCIA" BackgroundColor="#E8F5E9" TextColor="#388E3C" Clicked="OnAsistioClicked" HeightRequest="50"/>
+                        </Grid>
+                    </Grid>
+                    <VerticalStackLayout x:Name="EmptyStateLabel" VerticalOptions="Center" HorizontalOptions="Center" Spacing="15" IsVisible="True">
+                        <Label Text="SELECCIONAR PACIENTE" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource MediCyan}" HorizontalOptions="Center"/>
+                        <Label Text="Haga clic en un paciente para ver detalles." TextColor="{StaticResource MediMediumGray}" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ================= MODAL HISTORIAL MÉDICO (BOTONES GRANDES) ================= -->
+        <Grid x:Name="HistoryModalOverlay" BackgroundColor="#99000000" IsVisible="False" Padding="0">
+            <Border BackgroundColor="White" WidthRequest="700" HeightRequest="800" VerticalOptions="Center" HorizontalOptions="Center" Padding="30">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                
+                <Grid RowDefinitions="Auto, Auto, *, Auto" RowSpacing="15">
+                    
+                    <!-- 1. Header -->
+                    <Grid ColumnDefinitions="*, Auto">
+                        <VerticalStackLayout>
+                            <Label Text="EXPEDIENTE CLÍNICO" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource MediDarkGray}"/>
+                            <Label x:Name="LblHistoryPatientName" Text="Paciente: Juan Perez" TextColor="{StaticResource MediCyan}" FontSize="14" FontAttributes="Bold"/>
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1" Text="✕" TextColor="{StaticResource MediMediumGray}" BackgroundColor="Transparent" FontSize="24" WidthRequest="40" Clicked="CloseHistoryModal"/>
+                    </Grid>
+
+                    <!-- 2. Barra de Herramientas (Editor Tools) - MEJORADA -->
+                    <Border BackgroundColor="#F5F5F5" StrokeThickness="0" Padding="15" StrokeShape="RoundRectangle 5">
+                        <FlexLayout Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
+                            
+                            <!-- Controles de Fuente -->
+                            <Label Text="Tamaño:" FontSize="12" TextColor="Gray" VerticalOptions="Center" Margin="0,0,5,0"/>
+                            <Stepper x:Name="FontSizeStepper" Minimum="12" Maximum="30" Increment="2" Value="14" ValueChanged="OnFontSizeChanged" Margin="0,0,20,0"/>
+                            
+                            <Picker x:Name="FontPicker" Title="Fuente" WidthRequest="150" TextColor="{StaticResource MediDarkGray}" SelectedIndexChanged="OnFontChanged" Margin="0,0,20,0">
+                                <Picker.Items>
+                                    <x:String>Por Defecto</x:String>
+                                    <x:String>Monospace (Código)</x:String>
+                                    <x:String>Serif (Formal)</x:String>
+                                </Picker.Items>
+                            </Picker>
+
+                            <!-- BOTONES RÁPIDOS MÁS GRANDES -->
+                            <Button Text="📅 Fecha/Hora" 
+                                    FontSize="12" 
+                                    FontAttributes="Bold"
+                                    HeightRequest="45" 
+                                    Padding="20,0" 
+                                    Margin="5" 
+                                    BackgroundColor="{StaticResource MediLightGray}" 
+                                    TextColor="{StaticResource MediDarkGray}" 
+                                    Clicked="OnInsertDate"/>
+                                    
+                            <Button Text="📋 Plantilla SOAP" 
+                                    FontSize="12" 
+                                    FontAttributes="Bold"
+                                    HeightRequest="45" 
+                                    Padding="20,0" 
+                                    Margin="5" 
+                                    BackgroundColor="{StaticResource MediLightGray}" 
+                                    TextColor="{StaticResource MediDarkGray}" 
+                                    Clicked="OnInsertTemplate"/>
+                        </FlexLayout>
+                    </Border>
+
+                    <!-- 3. Editor (Hoja en Blanco) -->
+                    <Border Grid.Row="2" Stroke="{StaticResource MediLightGray}" StrokeThickness="1" BackgroundColor="White" Padding="20">
+                        <ScrollView>
+                            <Editor x:Name="TxtHistoryEditor" 
+                                    Placeholder="Escriba aquí las notas clínicas..." 
+                                    TextColor="{StaticResource MediDarkGray}"
+                                    BackgroundColor="Transparent"
+                                    AutoSize="TextChanges"
+                                    VerticalOptions="Fill"/>
+                        </ScrollView>
+                    </Border>
+
+                    <!-- 4. Footer -->
+                    <Grid Grid.Row="3" ColumnDefinitions="*, *" ColumnSpacing="20">
+                        <Button Text="Cancelar" BackgroundColor="{StaticResource MediMediumGray}" Clicked="CloseHistoryModal"/>
+                        <Button Text="Guardar Cambios" BackgroundColor="{StaticResource MediCyan}" Clicked="SaveHistory"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- MODAL DATOS PACIENTE (EXISTENTE) -->
+        <Grid x:Name="ModalOverlay" BackgroundColor="#80000000" IsVisible="False" Padding="0">
+            <Border BackgroundColor="White" WidthRequest="500" VerticalOptions="Center" HorizontalOptions="Center" Padding="30" MaximumHeightRequest="700">
+                <Border.StrokeShape><RoundRectangle CornerRadius="20"/></Border.StrokeShape>
+                <Grid RowDefinitions="Auto, *, Auto" RowSpacing="20" HeightRequest="600">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <Label x:Name="ModalTitle" Text="Datos Paciente" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource MediCyan}" VerticalOptions="Center"/>
+                        <Button Grid.Column="1" Text="✕" TextColor="{StaticResource MediMediumGray}" BackgroundColor="Transparent" FontSize="20" WidthRequest="40" HeightRequest="40" Padding="0" Clicked="CloseModal"/>
+                    </Grid>
+                    <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Always">
+                        <VerticalStackLayout Spacing="15" Padding="0,0,10,20">
+                            <VerticalStackLayout x:Name="SectionCita" Spacing="15" IsVisible="False">
+                                <Label Text="Detalles de la Nueva Cita" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource MediDarkGray}"/>
+                                <Label Text="Seleccionar Doctor" FontSize="12" TextColor="{StaticResource MediMediumGray}"/>
+                                <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0" HeightRequest="60">
+                                    <Picker x:Name="PickerDoctor" Title="Seleccionar Doctor" TextColor="{StaticResource MediDarkGray}" TitleColor="{StaticResource MediMediumGray}" VerticalOptions="Center"/>
+                                </Border>
+                                <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                                    <VerticalStackLayout Grid.Column="0">
+                                        <Label Text="Fecha" FontSize="12" TextColor="{StaticResource MediMediumGray}"/>
+                                        <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0" HeightRequest="60">
+                                            <DatePicker x:Name="PickerDate" TextColor="{StaticResource MediDarkGray}" MinimumDate="{x:Static sys:DateTime.Today}" VerticalOptions="Center"/>
+                                        </Border>
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1">
+                                        <Label Text="Hora" FontSize="12" TextColor="{StaticResource MediMediumGray}"/>
+                                        <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0" HeightRequest="60">
+                                            <TimePicker x:Name="PickerTime" TextColor="{StaticResource MediDarkGray}" VerticalOptions="Center"/>
+                                        </Border>
+                                    </VerticalStackLayout>
+                                </Grid>
+                                <BoxView HeightRequest="1" Color="{StaticResource MediLightGray}" Margin="0,10"/>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout x:Name="SectionPatientData" Spacing="15">
+                                <Label Text="Datos Personales" FontSize="14" FontAttributes="Bold" TextColor="{StaticResource MediDarkGray}"/>
+                                <Label Text="ID de Paciente" FontSize="10" TextColor="{StaticResource MediMediumGray}"/>
+                                <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                                    <Entry x:Name="TxtIdLegal" IsReadOnly="True" BackgroundColor="#F5F5F5" TextColor="{StaticResource MediMediumGray}" Margin="10,0" VerticalOptions="Center"/>
+                                </Border>
+                                <Label Text="Nombre Completo" FontSize="10" TextColor="{StaticResource MediMediumGray}"/>
+                                <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                                    <Entry x:Name="TxtNombre" Placeholder="Nombre Completo" TextColor="{StaticResource MediDarkGray}" Margin="10,0" VerticalOptions="Center"/>
+                                </Border>
+                                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                                    <VerticalStackLayout>
+                                        <Label Text="Edad" FontSize="10" TextColor="{StaticResource MediMediumGray}"/>
+                                        <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                                            <Entry x:Name="TxtEdad" Placeholder="0" Keyboard="Numeric" TextColor="{StaticResource MediDarkGray}" Margin="10,0" VerticalOptions="Center"/>
+                                        </Border>
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1">
+                                        <Label Text="Peso (kg)" FontSize="10" TextColor="{StaticResource MediMediumGray}"/>
+                                        <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                                            <Entry x:Name="TxtPeso" Placeholder="0.0" Keyboard="Numeric" TextColor="{StaticResource MediDarkGray}" Margin="10,0" VerticalOptions="Center"/>
+                                        </Border>
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="2">
+                                        <Label Text="Altura (m)" FontSize="10" TextColor="{StaticResource MediMediumGray}"/>
+                                        <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                                            <Entry x:Name="TxtAltura" Placeholder="0.00" Keyboard="Numeric" TextColor="{StaticResource MediDarkGray}" Margin="10,0" VerticalOptions="Center"/>
+                                        </Border>
+                                    </VerticalStackLayout>
+                                </Grid>
+                                <Label Text="Sexo" FontSize="10" TextColor="{StaticResource MediMediumGray}"/>
+                                <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0" HeightRequest="60">
+                                    <Picker x:Name="PickerSexo" Title="Seleccionar Sexo" TextColor="{StaticResource MediDarkGray}" TitleColor="{StaticResource MediMediumGray}" VerticalOptions="Center">
+                                        <Picker.Items><x:String>Masculino</x:String><x:String>Femenino</x:String></Picker.Items>
+                                    </Picker>
+                                </Border>
+                                <Label Text="Dirección" FontSize="10" TextColor="{StaticResource MediMediumGray}" Margin="0,10,0,0"/>
+                                <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                                    <Entry x:Name="TxtDireccion" Placeholder="Dirección exacta" TextColor="{StaticResource MediDarkGray}" Margin="10,0" VerticalOptions="Center"/>
+                                </Border>
+                                <Label Text="Teléfono" FontSize="10" TextColor="{StaticResource MediMediumGray}"/>
+                                <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                                    <Entry x:Name="TxtTelefono" Placeholder="0000-0000" Keyboard="Telephone" TextColor="{StaticResource MediDarkGray}" Margin="10,0" VerticalOptions="Center"/>
+                                </Border>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </ScrollView>
+                    <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="20">
+                        <Button Text="Cancelar" BackgroundColor="{StaticResource MediMediumGray}" Clicked="CloseModal"/>
+                        <Button Text="Guardar" BackgroundColor="{StaticResource MediCyan}" Clicked="SavePatient"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentPage>

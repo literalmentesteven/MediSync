@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:MediSync.Models"
+             x:Class="MediSync.Views.LaboratoryPage"
+             Title="Laboratorio"
+             BackgroundColor="{StaticResource MediLightGray}"
+             Loaded="OnPageLoaded">
+
+    <Grid ColumnDefinitions="3.5*, 6.5*" Padding="20" ColumnSpacing="20">
+
+        <!-- ======================================================== -->
+        <!-- COLUMNA IZQUIERDA: LISTA Y BOTONES -->
+        <!-- ======================================================== -->
+        <Grid Grid.Column="0" RowDefinitions="Auto, Auto, Auto, *">
+            <Label Text="Resultados Disponibles" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource MediDarkGray}" Margin="0,0,0,10"/>
+            
+            <!-- BOTÓN NUEVA ORDEN -->
+            <Button Grid.Row="1" Text="+ Nueva Orden Lab" HeightRequest="45" BackgroundColor="{StaticResource MediDarkGray}" TextColor="White" Margin="0,0,0,10" Clicked="OnNewOrderClicked"/>
+
+            <!-- BUSCADOR -->
+            <Border Grid.Row="2" StrokeShape="RoundRectangle 15" StrokeThickness="0" BackgroundColor="White" Margin="0,0,0,15" HeightRequest="50">
+                <Entry x:Name="SearchBar" Placeholder="Buscar paciente o examen..." Margin="10,0" TextColor="{StaticResource MediDarkGray}" TextChanged="OnSearchTextChanged" VerticalOptions="Center"/>
+            </Border>
+            
+            <!-- LISTA EXÁMENES -->
+            <CollectionView x:Name="ExamsList" Grid.Row="3" SelectionMode="Single" SelectionChanged="OnExamSelected">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Examen">
+                        <Border Margin="0,0,0,10" Padding="15" BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup Name="CommonStates">
+                                    <VisualState Name="Selected"><VisualState.Setters><Setter Property="BackgroundColor" Value="#E0F7FA" /></VisualState.Setters></VisualState>
+                                    <VisualState Name="Normal" />
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <Grid ColumnDefinitions="Auto, *">
+                                <Border BackgroundColor="{Binding ColorEstado}" HeightRequest="40" WidthRequest="40" StrokeShape="RoundRectangle 20" StrokeThickness="0" VerticalOptions="Center">
+                                    <Label Text="{Binding IconoEstado}" HorizontalOptions="Center" VerticalOptions="Center" TextColor="White"/>
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" Margin="15,0,0,0" Spacing="2">
+                                    <Label Text="{Binding TipoExamen}" FontAttributes="Bold" TextColor="{StaticResource MediDarkGray}" FontSize="14"/>
+                                    <Label Text="{Binding PacienteNombre}" TextColor="{StaticResource MediMediumGray}" FontSize="12"/>
+                                    <Label Text="{Binding Fecha, StringFormat='{0:dd/MM/yyyy}'}" TextColor="{StaticResource MediCyan}" FontSize="10"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
+
+        <!-- ======================================================== -->
+        <!-- COLUMNA DERECHA: DETALLES / REPORTE -->
+        <!-- ======================================================== -->
+        <Border Grid.Column="1" BackgroundColor="White" StrokeShape="RoundRectangle 5" Padding="40" StrokeThickness="0">
+            <Border.Shadow><Shadow Brush="Black" Opacity="0.1" Radius="10"/></Border.Shadow>
+            <Grid>
+                <VerticalStackLayout x:Name="EmptyState" VerticalOptions="Center" HorizontalOptions="Center" Spacing="15">
+                    <Label Text="📄" FontSize="60" HorizontalOptions="Center"/>
+                    <Label Text="Seleccione un examen para visualizar el reporte." TextColor="{StaticResource MediMediumGray}" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+
+                <Grid x:Name="ReportPanel" RowDefinitions="Auto, Auto, *, Auto" IsVisible="False">
+                    <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,20">
+                        <VerticalStackLayout Grid.Column="0">
+                            <Label Text="MEDISYNC LABS" FontSize="12" TextColor="{StaticResource MediMediumGray}" CharacterSpacing="2"/>
+                            <Label x:Name="LblExamTitle" Text="HEMOGRAMA" FontSize="24" FontAttributes="Bold" TextColor="{StaticResource MediDarkGray}" Margin="0,5,0,0"/>
+                            <Label x:Name="LblPatientName" Text="Paciente: Juan" FontSize="16" TextColor="{StaticResource MediCyan}"/>
+                        </VerticalStackLayout>
+                        <Label x:Name="LblDate" Grid.Column="1" Text="FECHA" VerticalOptions="Start" HorizontalOptions="End" TextColor="{StaticResource MediMediumGray}"/>
+                    </Grid>
+
+                    <BoxView Grid.Row="1" HeightRequest="2" Color="{StaticResource MediLightGray}" Margin="0,0,0,20"/>
+
+                    <ScrollView Grid.Row="2">
+                        <StackLayout>
+                            <Border x:Name="PendingAlert" BackgroundColor="#FFF3E0" StrokeThickness="0" Padding="15" Margin="0,0,0,20" IsVisible="False">
+                                <Label Text="⏳ Resultados pendientes de procesamiento." TextColor="#FF9800" HorizontalOptions="Center"/>
+                            </Border>
+                            
+                            <Border x:Name="PdfAvailableAlert" BackgroundColor="#E0F7FA" StrokeThickness="0" Padding="15" Margin="0,0,0,20" IsVisible="False">
+                                <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
+                                    <Label Text="📎" FontSize="16"/>
+                                    <Label Text="Este examen contiene un archivo PDF adjunto." TextColor="{StaticResource MediCyan}" FontAttributes="Bold"/>
+                                </HorizontalStackLayout>
+                            </Border>
+
+                            <!-- AQUÍ ESTABA EL ERROR DE LblResultadosTexto -->
+                            <!-- Usamos esta etiqueta si no hay tabla compleja, o la tabla de abajo -->
+                            <Label x:Name="LblResultadosTexto" Text="" TextColor="{StaticResource MediDarkGray}" FontFamily="Monospace" IsVisible="False"/>
+
+                            <CollectionView x:Name="ResultsGrid">
+                                <CollectionView.Header>
+                                    <Grid ColumnDefinitions="3*, 2*, 2*" Padding="10" BackgroundColor="{StaticResource MediLightGray}">
+                                        <Label Text="PARÁMETRO" FontAttributes="Bold" TextColor="{StaticResource MediMediumGray}" Grid.Column="0"/>
+                                        <Label Text="RESULTADO" FontAttributes="Bold" TextColor="{StaticResource MediMediumGray}" Grid.Column="1"/>
+                                        <Label Text="REFERENCIA" FontAttributes="Bold" TextColor="{StaticResource MediMediumGray}" Grid.Column="2"/>
+                                    </Grid>
+                                </CollectionView.Header>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ResultadoDetalle">
+                                        <Grid ColumnDefinitions="3*, 2*, 2*" Padding="10,15">
+                                            <Label Text="{Binding Parametro}" TextColor="{StaticResource MediDarkGray}" Grid.Column="0"/>
+                                            <Label Text="{Binding Valor}" FontAttributes="Bold" TextColor="{Binding ColorValor}" Grid.Column="1"/>
+                                            <Label Text="{Binding Referencia}" TextColor="{StaticResource MediMediumGray}" Grid.Column="2"/>
+                                            <BoxView HeightRequest="1" Color="#F0F0F0" Grid.ColumnSpan="3" VerticalOptions="End"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </StackLayout>
+                    </ScrollView>
+
+                    <Grid Grid.Row="3" ColumnDefinitions="*, *" ColumnSpacing="20" Margin="0,20,0,0">
+                        <Button x:Name="BtnPrint" Grid.Column="0" Text="🖨️ Ver Documento / PDF" BackgroundColor="{StaticResource MediLightGray}" TextColor="{StaticResource MediDarkGray}" Clicked="OnPrintClicked"/>
+                        <Button Grid.Column="1" Text="✅ Marcar Revisado" BackgroundColor="{StaticResource MediCyan}" TextColor="White" Clicked="OnMarkReviewedClicked"/>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- ============================================================ -->
+        <!-- MODAL 1: NUEVA ORDEN (RESTAURADO) -->
+        <!-- ============================================================ -->
+        <Grid x:Name="OrderModal" BackgroundColor="#80000000" IsVisible="False" Padding="0">
+            <Border BackgroundColor="White" WidthRequest="500" VerticalOptions="Center" HorizontalOptions="Center" Padding="30">
+                <Border.StrokeShape><RoundRectangle CornerRadius="15"/></Border.StrokeShape>
+                <Grid RowDefinitions="Auto, *, Auto" RowSpacing="20" HeightRequest="500">
+                    <Label Text="Solicitar Exámenes" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource MediCyan}"/>
+                    
+                    <ScrollView Grid.Row="1">
+                        <VerticalStackLayout Spacing="15">
+                            <Label Text="Seleccionar Paciente" FontSize="12" TextColor="{StaticResource MediMediumGray}"/>
+                            <Border Stroke="{StaticResource MediLightGray}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0" HeightRequest="50">
+                                <Picker x:Name="PickerPatient" Title="Paciente" TextColor="{StaticResource MediDarkGray}" TitleColor="{StaticResource MediMediumGray}" VerticalOptions="Center"/>
+                            </Border>
+
+                            <Label Text="Seleccionar Exámenes (Checklist)" FontSize="12" TextColor="{StaticResource MediMediumGray}" Margin="0,10,0,0"/>
+                            <CollectionView x:Name="CheckListExams">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate>
+                                        <HorizontalStackLayout Spacing="10" Padding="5">
+                                            <CheckBox IsChecked="{Binding IsSelected}" Color="{StaticResource MediCyan}"/>
+                                            <Label Text="{Binding Nombre}" TextColor="{StaticResource MediDarkGray}" VerticalOptions="Center"/>
+                                        </HorizontalStackLayout>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                            
+                            <HorizontalStackLayout Spacing="10">
+                                <CheckBox x:Name="CheckUrgente" Color="Red"/>
+                                <Label Text="Marcar como URGENTE" TextColor="Red" FontAttributes="Bold" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </ScrollView>
+
+                    <Grid Grid.Row="2" ColumnDefinitions="*, *" ColumnSpacing="20">
+                        <Button Text="Cancelar" BackgroundColor="{StaticResource MediMediumGray}" Clicked="CloseOrderModal"/>
+                        <Button Text="Enviar Orden" BackgroundColor="{StaticResource MediCyan}" Clicked="SendOrder"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ============================================================ -->
+        <!-- MODAL 2: VISTA PREVIA PDF/DOC (IGUAL QUE ANTES) -->
+        <!-- ============================================================ -->
+        <Grid x:Name="PrintPreviewModal" BackgroundColor="#CC000000" IsVisible="False" Padding="0">
+            <Border BackgroundColor="White" WidthRequest="700" HeightRequest="850" VerticalOptions="Center" HorizontalOptions="Center" Padding="0">
+                <Border.StrokeShape><RoundRectangle CornerRadius="5"/></Border.StrokeShape>
+                
+                <Grid RowDefinitions="50, *">
+                    <Grid Grid.Row="0" BackgroundColor="#333" Padding="20,0">
+                        <Label Text="VISOR DE DOCUMENTOS" TextColor="White" VerticalOptions="Center" FontAttributes="Bold"/>
+                        <Button Text="✕ Cerrar" BackgroundColor="Transparent" TextColor="White" HorizontalOptions="End" Clicked="ClosePrintModal" HeightRequest="40" WidthRequest="80"/>
+                    </Grid>
+
+                    <Grid Grid.Row="1" BackgroundColor="#555" Padding="20">
+                        <WebView x:Name="PdfViewer" HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand" IsVisible="False" BackgroundColor="White"/>
+
+                        <ScrollView x:Name="DocumentContainer" IsVisible="False">
+                            <Border BackgroundColor="White" StrokeThickness="0" HorizontalOptions="Center" WidthRequest="600" Padding="50" Margin="0,0,0,20">
+                                <Border.Shadow><Shadow Brush="Black" Opacity="0.5" Radius="20" Offset="0,10"/></Border.Shadow>
+                                <VerticalStackLayout Spacing="0">
+                                    <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,30">
+                                        <VerticalStackLayout>
+                                            <Label Text="MEDISYNC HOSPITAL" FontSize="26" FontAttributes="Bold" TextColor="{StaticResource MediCyan}" CharacterSpacing="2"/>
+                                            <Label Text="DEPARTAMENTO DE LABORATORIO CLÍNICO" FontSize="12" TextColor="Gray" FontAttributes="Bold" CharacterSpacing="1"/>
+                                        </VerticalStackLayout>
+                                        <Border Grid.Column="1" Stroke="Black" StrokeThickness="2" Padding="15,5" VerticalOptions="Start">
+                                            <Label x:Name="LblFolio" Text="FOLIO: #0000" FontAttributes="Bold" TextColor="Black"/>
+                                        </Border>
+                                    </Grid>
+                                    <BoxView HeightRequest="3" Color="Black" Margin="0,0,0,30"/>
+                                    <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="40" RowSpacing="15" Margin="0,0,0,40">
+                                        <VerticalStackLayout>
+                                            <Label Text="PACIENTE:" FontSize="10" TextColor="Gray" FontAttributes="Bold"/>
+                                            <Label x:Name="DocPatientName" Text="JUAN PEREZ" FontSize="16" TextColor="Black" FontAttributes="Bold"/>
+                                        </VerticalStackLayout>
+                                        <VerticalStackLayout Grid.Column="1">
+                                            <Label Text="FECHA:" FontSize="10" TextColor="Gray" FontAttributes="Bold"/>
+                                            <Label x:Name="DocDate" Text="24/11/2025" FontSize="16" TextColor="Black"/>
+                                        </VerticalStackLayout>
+                                        <VerticalStackLayout Grid.Row="1">
+                                            <Label Text="MÉDICO:" FontSize="10" TextColor="Gray" FontAttributes="Bold"/>
+                                            <Label x:Name="DocDoctorName" Text="DR. HOUSE" FontSize="16" TextColor="Black"/>
+                                        </VerticalStackLayout>
+                                        <VerticalStackLayout Grid.Row="1" Grid.Column="1">
+                                            <Label Text="ESTUDIO:" FontSize="10" TextColor="Gray" FontAttributes="Bold"/>
+                                            <Label x:Name="DocExamType" Text="HEMOGRAMA" FontSize="16" TextColor="Black" FontAttributes="Bold"/>
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                    <Label Text="RESULTADOS DEL ANÁLISIS" FontSize="14" FontAttributes="Bold" TextColor="{StaticResource MediCyan}" Margin="0,0,0,15"/>
+                                    <BoxView HeightRequest="1" Color="{StaticResource MediCyan}" Margin="0,0,0,15"/>
+                                    <Border x:Name="DocPendingBanner" BackgroundColor="#FFF3E0" StrokeThickness="0" Padding="20" Margin="0,0,0,20" IsVisible="False">
+                                        <Label Text="MUESTRA EN PROCESO - RESULTADOS NO DISPONIBLES" TextColor="#FF9800" HorizontalOptions="Center" FontAttributes="Bold"/>
+                                    </Border>
+                                    <CollectionView x:Name="DocResultsGrid">
+                                        <CollectionView.Header>
+                                            <Grid ColumnDefinitions="4*, 3*, 3*" Padding="5,10" BackgroundColor="#EEEEEE">
+                                                <Label Text="PARÁMETRO" FontAttributes="Bold" FontSize="11" TextColor="Black" Grid.Column="0"/>
+                                                <Label Text="RESULTADO" FontAttributes="Bold" FontSize="11" TextColor="Black" Grid.Column="1"/>
+                                                <Label Text="REFERENCIA" FontAttributes="Bold" FontSize="11" TextColor="Black" Grid.Column="2"/>
+                                            </Grid>
+                                        </CollectionView.Header>
+                                        <CollectionView.ItemTemplate>
+                                            <DataTemplate x:DataType="models:ResultadoDetalle">
+                                                <Grid ColumnDefinitions="4*, 3*, 3*" Padding="5,12">
+                                                    <Label Text="{Binding Parametro}" TextColor="Black" Grid.Column="0" FontSize="12"/>
+                                                    <Label Text="{Binding Valor}" FontAttributes="Bold" TextColor="{Binding ColorValor}" Grid.Column="1" FontSize="12"/>
+                                                    <Label Text="{Binding Referencia}" TextColor="Gray" Grid.Column="2" FontSize="12"/>
+                                                    <BoxView HeightRequest="1" Color="#E0E0E0" Grid.ColumnSpan="3" VerticalOptions="End"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </CollectionView.ItemTemplate>
+                                    </CollectionView>
+                                    <VerticalStackLayout Margin="0,80,0,0" Spacing="5">
+                                        <Grid ColumnDefinitions="*,*" Margin="0,50,0,0">
+                                            <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="5">
+                                                <Image Source="firma_digital.png" HeightRequest="50" Aspect="AspectFit" Opacity="0.8"/> 
+                                                <BoxView HeightRequest="1" Color="Black" WidthRequest="200"/>
+                                                <Label Text="Q.F.B. Responsable" FontSize="11" TextColor="Black" HorizontalOptions="Center" FontAttributes="Bold"/>
+                                                <Label Text="Cédula Prof. 123456" FontSize="10" TextColor="Gray" HorizontalOptions="Center"/>
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+                            </Border>
+                        </ScrollView>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentPage>

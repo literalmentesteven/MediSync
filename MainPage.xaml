@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MediSync.Views.MainPage"
+             Title="MediSync"
+             BackgroundColor="{StaticResource MediLightGray}">
+
+    <Grid>
+        <!-- Marca de agua fondo -->
+        <Label Text="MediSync" 
+               FontSize="80" 
+               FontAttributes="Bold" 
+               TextColor="#E0E0E0" 
+               Rotation="-45"
+               HorizontalOptions="Center" 
+               VerticalOptions="Center"/>
+
+        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="20">
+            <Image Source="dotnet_bot.png" HeightRequest="150" Aspect="AspectFit"/>
+            
+            <Label Text="Sección en Construcción" 
+                   FontSize="24" 
+                   FontAttributes="Bold" 
+                   TextColor="{StaticResource MediCyan}"
+                   HorizontalOptions="Center"/>
+            
+            <Label Text="Esta funcionalidad estará disponible pronto." 
+                   TextColor="{StaticResource MediMediumGray}"
+                   HorizontalOptions="Center"/>
+        </VerticalStackLayout>
+    </Grid>
+
+</ContentPage>
