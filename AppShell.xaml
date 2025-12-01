@@ -4,11 +4,89 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:MediSync"
-    Title="MediSync">
+    xmlns:views="clr-namespace:MediSync.Views"
+    Title="MediSync"
+    FlyoutBehavior="Flyout"
+    FlyoutBackgroundColor="White"
+    FlyoutWidth="320">
 
-    <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+    <Shell.Resources>
+        <Style x:Key="BaseStyle" TargetType="Element">
+            <Setter Property="Shell.BackgroundColor" Value="{StaticResource MediCyan}" />
+            <Setter Property="Shell.ForegroundColor" Value="White" />
+            <Setter Property="Shell.TitleColor" Value="White" />
+        </Style>
+    </Shell.Resources>
+
+    <Shell.FlyoutHeader>
+        <Grid BackgroundColor="{StaticResource MediLightGray}" HeightRequest="220" Padding="20">
+            <BoxView Color="White" CornerRadius="20" Opacity="0.5" Margin="10"/>
+            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
+                <Image Source="medisync_logo.png" HeightRequest="100" Aspect="AspectFit" HorizontalOptions="Center"/>
+                <BoxView HeightRequest="2" WidthRequest="50" Color="{StaticResource MediCyan}" CornerRadius="1"/>
+            </VerticalStackLayout>
+        </Grid>
+    </Shell.FlyoutHeader>
+
+    <Shell.ItemTemplate>
+        <DataTemplate>
+            <Border StrokeThickness="0" BackgroundColor="Transparent" Padding="15,5" HeightRequest="75">
+                <VisualStateManager.VisualStateGroups>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal"><VisualState.Setters><Setter Property="BackgroundColor" Value="Transparent" /></VisualState.Setters></VisualState>
+                        <VisualState x:Name="Selected"><VisualState.Setters><Setter Property="BackgroundColor" Value="#E0F7FA" /><Setter Property="StrokeShape" Value="RoundRectangle 10"/></VisualState.Setters></VisualState>
+                    </VisualStateGroup>
+                </VisualStateManager.VisualStateGroups>
+                <Grid ColumnDefinitions="50, *" ColumnSpacing="15" VerticalOptions="Center">
+                    <Image Source="{Binding Icon}" HeightRequest="30" WidthRequest="30" Aspect="AspectFit" VerticalOptions="Center" HorizontalOptions="Center"/>
+                    <Label Grid.Column="1" Text="{Binding Title}" FontSize="18" FontAttributes="Bold" TextColor="{StaticResource MediDarkGray}" VerticalOptions="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Shell.ItemTemplate>
+
+    <Shell.MenuItemTemplate>
+        <DataTemplate>
+            <Border StrokeThickness="0" BackgroundColor="Transparent" Padding="15,5" HeightRequest="75">
+                <Grid ColumnDefinitions="50, *" ColumnSpacing="15" VerticalOptions="Center">
+                    <Image Source="dotnet_bot.png" HeightRequest="30" WidthRequest="30" VerticalOptions="Center" HorizontalOptions="Center"/> 
+                    <Label Grid.Column="1" Text="{Binding Text}" FontSize="18" FontAttributes="Bold" TextColor="#D32F2F" VerticalOptions="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Shell.MenuItemTemplate>
+
+    <Shell.FlyoutIcon><FontImageSource Glyph="&#9776;" Color="{StaticResource MediCyan}" Size="35" FontFamily="OpenSansRegular" /></Shell.FlyoutIcon>
+    <Shell.TitleView><HorizontalStackLayout VerticalOptions="Center" Spacing="10"><Image Source="medisync_logo.png" HeightRequest="35" Aspect="AspectFit" VerticalOptions="Center" Margin="0,5,0,0"/> </HorizontalStackLayout></Shell.TitleView>
+
+    <!-- PESTAÑAS CONTROLADAS POR ROL -->
+    
+    <FlyoutItem x:Name="TabPacientes" Title="Pacientes" Icon="paciente.png">
+        <ShellContent ContentTemplate="{DataTemplate views:PatientsPage}" Route="PatientsPage" />
+    </FlyoutItem>
+    
+    <FlyoutItem x:Name="TabHorarios" Title="Horarios" Icon="horario.png">
+        <ShellContent ContentTemplate="{DataTemplate views:SchedulePage}" Route="SchedulePage" />
+    </FlyoutItem>
+
+    <FlyoutItem x:Name="TabDoctores" Title="Doctores" Icon="doctor.png">
+        <ShellContent ContentTemplate="{DataTemplate views:DoctorsPage}" Route="DoctorsPage" />
+    </FlyoutItem>
+    
+    <!-- Laboratorio para DOCTORES (Ver resultados / Pedir orden) -->
+    <FlyoutItem x:Name="TabLabDoctor" Title="Lab Resultados" Icon="laboratorio.png">
+        <ShellContent ContentTemplate="{DataTemplate views:LaboratoryPage}" Route="LaboratoryPage" />
+    </FlyoutItem>
+
+    <!-- Laboratorio para PERSONAL (Procesar muestras) -->
+    <FlyoutItem x:Name="TabLabStaff" Title="Gestión Lab" Icon="laboratorio.png">
+        <ShellContent ContentTemplate="{DataTemplate views:LabProcessingPage}" Route="LabProcessingPage" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Mi Perfil" Icon="perfil.png">
+        <ShellContent ContentTemplate="{DataTemplate views:ProfilePage}" Route="ProfilePage" />
+    </FlyoutItem>
+    
+    <MenuItem Text="Cerrar Sesión" IconImageSource="cerrar_sesion.png" Clicked="OnLogoutClicked"/>
 
 </Shell>
