@@ -7,14 +7,10 @@ using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// =================================================================
-// 1. CONFIGURACIÓN DE SERVICIOS Y BASE DE DATOS
-// =================================================================
-
-var connectionString = "Data Source=medisync_login.db";
-
+// 1. CONFIGURACIÓN
+var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "medisync_login.db");
 builder.Services.AddDbContext<AppDbContext>(options => 
-    options.UseSqlite(connectionString));
+    options.UseSqlite($"Data Source={dbPath}"));
 
 builder.Services.AddSingleton<PasswordValidatorService>();
 builder.Services.AddSingleton<IdGenerationService>();
@@ -22,72 +18,55 @@ builder.Services.AddSingleton<IdGenerationService>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader());
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
 var app = builder.Build();
 
 app.UseCors("AllowAll");
-
-// Permite servir los archivos PDF
 app.UseStaticFiles(); 
 
-// =================================================================
 // 2. INICIALIZACIÓN DE DATOS (SEED)
-// =================================================================
 using (var scope = app.Services.CreateScope())
 {
-    var services = scope.ServiceProvider;
     try
     {
-        var context = services.GetRequiredService<AppDbContext>();
-        context.Database.EnsureCreated();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        context.Database.EnsureCreated(); // Crea la BD si no existe
 
         var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
         if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
 
-        // --- USUARIOS ---
+        // Usuarios Base
         if (!context.Usuarios.Any(u => u.Rol == "Superusuario"))
         {
             context.Usuarios.Add(new Usuario
             {
-                IdUsuario = "99999", 
-                NombreCompleto = "Super Admin",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("SuperAdminPass123"),
-                Rol = "Superusuario",
-                FechaNacimiento = new DateTime(1980, 1, 1),
-                Info = "Admin Sistema",
-                Telefono = "0000-0000"
+                IdUsuario = "99999", NombreCompleto = "Super Admin", PasswordHash = BCrypt.Net.BCrypt.HashPassword("1234"),
+                Rol = "Superusuario", FechaNacimiento = new DateTime(1980, 1, 1), Info = "Admin Sistema", Telefono = "0000-0000",
+                Especialidad = "", FotoUrl = ""
             });
         }
-        
         if (!context.Usuarios.Any(u => u.Rol == "Laboratorio"))
         {
             context.Usuarios.Add(new Usuario
             {
-                IdUsuario = "300000001", 
-                NombreCompleto = "Lic. Sarah Lab",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("pass"),
-                Rol = "Laboratorio",
-                FechaNacimiento = new DateTime(1985, 5, 20),
-                Info = "Jefa de Laboratorio",
-                Telefono = "1111-1111"
+                IdUsuario = "300000001", NombreCompleto = "Lic. Sarah Lab", PasswordHash = BCrypt.Net.BCrypt.HashPassword("pass"),
+                Rol = "Laboratorio", FechaNacimiento = new DateTime(1985, 5, 20), Info = "Jefa de Laboratorio", Telefono = "1111-1111",
+                Especialidad = "", FotoUrl = ""
             });
         }
-
         if (!context.Usuarios.Any(u => u.Rol == "Doctor"))
         {
             context.Usuarios.AddRange(new List<Usuario>
             {
-                new Usuario { IdUsuario="1000001", NombreCompleto="Dr. Gregory House", Rol="Doctor", PasswordHash=BCrypt.Net.BCrypt.HashPassword("pass"), Info="Diagnóstico.", Especialidad="Nefrología", FechaNacimiento=new DateTime(1959,5,15), Telefono="8888-1111" },
-                new Usuario { IdUsuario="1000002", NombreCompleto="Dra. Meredith Grey", Rol="Doctor", PasswordHash=BCrypt.Net.BCrypt.HashPassword("pass"), Info="Cirugía General.", Especialidad="Cirugía General", FechaNacimiento=new DateTime(1978,1,1), Telefono="8888-2222" },
-                new Usuario { IdUsuario="1000003", NombreCompleto="Dr. Shaun Murphy", Rol="Doctor", PasswordHash=BCrypt.Net.BCrypt.HashPassword("pass"), Info="Cirugía Pediátrica.", Especialidad="Cirugía Pediátrica", FechaNacimiento=new DateTime(1992,2,14), Telefono="8888-3333" }
+                new Usuario { IdUsuario="1000001", NombreCompleto="Dr. Gregory House", Rol="Doctor", PasswordHash=BCrypt.Net.BCrypt.HashPassword("pass"), Info="Diagnóstico.", Especialidad="Nefrología", FechaNacimiento=new DateTime(1959,5,15), Telefono="8888-1111", FotoUrl="" },
+                new Usuario { IdUsuario="1000002", NombreCompleto="Dra. Meredith Grey", Rol="Doctor", PasswordHash=BCrypt.Net.BCrypt.HashPassword("pass"), Info="Cirugía General.", Especialidad="Cirugía General", FechaNacimiento=new DateTime(1978,1,1), Telefono="8888-2222", FotoUrl="" },
+                new Usuario { IdUsuario="1000003", NombreCompleto="Dr. Shaun Murphy", Rol="Doctor", PasswordHash=BCrypt.Net.BCrypt.HashPassword("pass"), Info="Cirugía Pediátrica.", Especialidad="Cirugía Pediátrica", FechaNacimiento=new DateTime(1992,2,14), Telefono="8888-3333", FotoUrl="" }
             });
         }
 
-        // --- PACIENTES ---
+        // Pacientes Base
         if (!context.Pacientes.Any())
         {
             context.Pacientes.AddRange(new List<Paciente>
@@ -97,32 +76,14 @@ using (var scope = app.Services.CreateScope())
             });
         }
 
-        // --- EXÁMENES ---
+        // Exámenes Base (CORREGIDO: ArchivoPdfUrl nunca es null)
         if (!context.Examenes.Any())
         {
             context.Examenes.AddRange(new List<Examen>
             {
-                new Examen { 
-                    PacienteNombre = "Carlos Santana", 
-                    TipoExamen = "Hemograma Completo", 
-                    Fecha = DateTime.Now.AddDays(-1), 
-                    Estado = "Enviado", 
-                    EsCritico = false, 
-                    DatosResultado = "Hemoglobina: 14.5|Leucocitos: 7500",
-                    DoctorSolicitanteId = "1000001",
-                    NombreDoctor = "Dr. Gregory House",
-                    ArchivoPdfUrl = "resultado_hemograma_001.pdf" 
-                },
-                new Examen { 
-                    PacienteNombre = "Ana Gabriel", 
-                    TipoExamen = "Perfil Lipídico", 
-                    Fecha = DateTime.Now, 
-                    Estado = "Pendiente", 
-                    EsCritico = false, 
-                    DatosResultado = "",
-                    DoctorSolicitanteId = "1000002",
-                    NombreDoctor = "Dra. Meredith Grey"
-                }
+                new Examen { PacienteNombre = "Carlos Santana", TipoExamen = "Hemograma Completo", Fecha = DateTime.Now.AddDays(-1), Estado = "Enviado", EsCritico = false, DatosResultado = "Hemoglobina: 14.5|Leucocitos: 7500", DoctorSolicitanteId = "1000001", NombreDoctor = "Dr. Gregory House", ArchivoPdfUrl = "resultado_hemograma_001.pdf" },
+                // CORRECCION AQUI: Se agregó ArchivoPdfUrl = "" para evitar el crash
+                new Examen { PacienteNombre = "Ana Gabriel", TipoExamen = "Perfil Lipídico", Fecha = DateTime.Now, Estado = "Pendiente", EsCritico = false, DatosResultado = "", DoctorSolicitanteId = "1000002", NombreDoctor = "Dra. Meredith Grey", ArchivoPdfUrl = "" }
             });
         }
         
@@ -130,13 +91,11 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[ERROR DB]: {ex.Message}");
+        Console.WriteLine($"[ERROR INICIALIZACION]: {ex.Message}");
     }
 }
 
-// =================================================================
-// 3. ENDPOINTS
-// =================================================================
+// 3. ENDPOINTS API
 
 app.MapPost("/api/login", async (LoginRequest loginRequest, AppDbContext db) =>
 {
@@ -160,9 +119,7 @@ app.MapPut("/api/usuarios/{idUsuario}", async (string idUsuario, UpdateProfileRe
 {
     var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.IdUsuario == idUsuario);
     if (usuario == null) return Results.NotFound();
-    usuario.Telefono = request.Telefono;
-    usuario.Info = request.Info;
-    usuario.FotoUrl = request.FotoUrl;
+    usuario.Telefono = request.Telefono; usuario.Info = request.Info; usuario.FotoUrl = request.FotoUrl;
     await db.SaveChangesAsync();
     return Results.Ok(usuario);
 });
@@ -178,15 +135,9 @@ app.MapPost("/api/usuarios/generar", async (CreateUserRequest newUser, AppDbCont
     var nuevoId = idGen.GenerarId(newUser.Rol);
     var usuario = new Usuario
     {
-        IdUsuario = nuevoId,
-        NombreCompleto = newUser.NombreCompleto,
-        PasswordHash = BCrypt.Net.BCrypt.HashPassword(newUser.Password),
-        Rol = newUser.Rol,
-        FechaNacimiento = newUser.FechaNacimiento,
-        Telefono = newUser.Telefono,
-        Info = newUser.Info,
-        Especialidad = newUser.Rol == "Doctor" ? newUser.Especialidad : "",
-        FotoUrl = ""
+        IdUsuario = nuevoId, NombreCompleto = newUser.NombreCompleto, PasswordHash = BCrypt.Net.BCrypt.HashPassword(newUser.Password),
+        Rol = newUser.Rol, FechaNacimiento = newUser.FechaNacimiento, Telefono = newUser.Telefono, Info = newUser.Info,
+        Especialidad = newUser.Rol == "Doctor" ? newUser.Especialidad : "", FotoUrl = ""
     };
     db.Usuarios.Add(usuario);
     await db.SaveChangesAsync();
@@ -208,11 +159,37 @@ app.MapGet("/api/pacientes", async (AppDbContext db) =>
 
 app.MapPost("/api/pacientes", async (Paciente np, AppDbContext db) =>
 {
-    db.Pacientes.Add(np);
-    await db.SaveChangesAsync();
-    np.IdLegal = np.Id.ToString().PadLeft(3, '0');
-    await db.SaveChangesAsync();
-    return Results.Created($"/api/pacientes/{np.Id}", np);
+    // 1. Buscamos si ya existe un paciente con esa identificación (IdLegal)
+    var pacienteExistente = await db.Pacientes.FirstOrDefaultAsync(p => p.IdLegal == np.IdLegal);
+
+    if (pacienteExistente != null)
+    {
+        // 2. Si existe, SOLO ACTUALIZAMOS la cita y datos de contacto
+        pacienteExistente.HoraCita = np.HoraCita;
+        pacienteExistente.DoctorAsignado = np.DoctorAsignado;
+        pacienteExistente.EstadoCita = "Pendiente";
+        pacienteExistente.Telefono = np.Telefono; // Actualizamos tel por si cambió
+        pacienteExistente.Direccion = np.Direccion;
+        pacienteExistente.Peso = np.Peso;
+        pacienteExistente.Altura = np.Altura;
+        
+        await db.SaveChangesAsync();
+        return Results.Ok(pacienteExistente); // Retornamos el existente actualizado
+    }
+    else
+    {
+        // 3. Si NO existe, lo creamos como nuevo
+        db.Pacientes.Add(np);
+        await db.SaveChangesAsync();
+        
+        // Generamos IdLegal automático solo si no venía uno
+        if (string.IsNullOrEmpty(np.IdLegal))
+        {
+            np.IdLegal = np.Id.ToString().PadLeft(3, '0');
+            await db.SaveChangesAsync();
+        }
+        return Results.Created($"/api/pacientes/{np.Id}", np);
+    }
 });
 
 app.MapPut("/api/pacientes/{id}", async (int id, Paciente p, AppDbContext db) =>
@@ -221,7 +198,8 @@ app.MapPut("/api/pacientes/{id}", async (int id, Paciente p, AppDbContext db) =>
     if (ex == null) return Results.NotFound();
     ex.NombreCompleto = p.NombreCompleto; ex.Edad = p.Edad; ex.Peso = p.Peso; ex.Altura = p.Altura;
     ex.Sexo = p.Sexo; ex.Direccion = p.Direccion; ex.Telefono = p.Telefono;
-    ex.EstadoCita = p.EstadoCita; ex.DoctorAsignado = p.DoctorAsignado; ex.HoraCita = p.HoraCita; ex.HistoriaClinica = p.HistoriaClinica;
+    ex.EstadoCita = p.EstadoCita; ex.DoctorAsignado = p.DoctorAsignado; 
+    ex.HoraCita = p.HoraCita; ex.HistoriaClinica = p.HistoriaClinica;
     await db.SaveChangesAsync();
     return Results.Ok(ex);
 });
@@ -230,7 +208,11 @@ app.MapGet("/api/examenes", async (AppDbContext db) => Results.Ok(await db.Exame
 
 app.MapPost("/api/examenes", async (Examen e, AppDbContext db) => 
 {
-    e.Fecha = DateTime.Now; e.Estado = "Pendiente";
+    e.Fecha = DateTime.Now; 
+    e.Estado = "Pendiente";
+    // Evitamos error de base de datos si viene nulo
+    if (e.ArchivoPdfUrl == null) e.ArchivoPdfUrl = ""; 
+    
     db.Examenes.Add(e);
     await db.SaveChangesAsync();
     return Results.Created($"/api/examenes/{e.Id}", e);
@@ -240,51 +222,38 @@ app.MapPut("/api/examenes/{id}", async (int id, Examen e, AppDbContext db) =>
 {
     var ex = await db.Examenes.FindAsync(id);
     if (ex == null) return Results.NotFound();
-    ex.DatosResultado = e.DatosResultado; ex.Estado = e.Estado; ex.EsCritico = e.EsCritico;
-    ex.ArchivoPdfUrl = e.ArchivoPdfUrl;
+    ex.DatosResultado = e.DatosResultado; ex.Estado = e.Estado; 
+    ex.EsCritico = e.EsCritico; ex.ArchivoPdfUrl = e.ArchivoPdfUrl;
     await db.SaveChangesAsync();
     return Results.Ok(ex);
 });
 
-// =================================================================
-// SECCIÓN DE UPLOAD MODIFICADA (SIN IFormFile PARA EVITAR ERROR)
-// =================================================================
 app.MapPost("/api/examenes/{id}/upload", async (int id, HttpRequest request, AppDbContext db) =>
 {
     var examen = await db.Examenes.FindAsync(id);
     if (examen == null) return Results.NotFound("Examen no encontrado");
 
-    // Verificación manual del archivo en la petición
     if (!request.HasFormContentType || request.Form.Files.Count == 0)
         return Results.BadRequest("No se envió ningún archivo");
 
     var file = request.Form.Files[0];
-
     var fileName = $"examen_{id}_{Guid.NewGuid()}.pdf";
     var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
     if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
 
-    var filePath = Path.Combine(uploadPath, fileName);
-
-    using (var stream = new FileStream(filePath, FileMode.Create))
+    using (var stream = new FileStream(Path.Combine(uploadPath, fileName), FileMode.Create))
     {
         await file.CopyToAsync(stream);
     }
-
     examen.ArchivoPdfUrl = fileName;
     await db.SaveChangesAsync();
-
     return Results.Ok(new { url = fileName });
 });
-// =================================================================
-
 
 app.Urls.Add("http://localhost:7151");
 app.Run();
 
-// =================================================================
 // 4. CLASES Y MODELOS
-// =================================================================
 
 public class PasswordValidatorService
 {
@@ -299,7 +268,12 @@ public class PasswordValidatorService
 public class IdGenerationService
 {
     private readonly Random _random = new Random();
-    public string GenerarId(string rol) => rol switch { "Administrador" => _random.Next(10000, 99999).ToString(), "Doctor" => _random.Next(1000000, 9999999).ToString(), "Laboratorio" => _random.Next(100000000, 999999999).ToString(), _ => _random.Next(10000, 99999).ToString() };
+    public string GenerarId(string rol) => rol switch { 
+        "Administrador" => _random.Next(10000, 99999).ToString(), 
+        "Doctor" => _random.Next(1000000, 9999999).ToString(), 
+        "Laboratorio" => _random.Next(100000000, 999999999).ToString(), 
+        _ => _random.Next(10000, 99999).ToString() 
+    };
 }
 public class AppDbContext : DbContext
 {
@@ -308,6 +282,7 @@ public class AppDbContext : DbContext
     public DbSet<Paciente> Pacientes { get; set; }
     public DbSet<Examen> Examenes { get; set; }
 }
+
 public class Usuario { [Key] public int Id { get; set; } public string IdUsuario { get; set; } public string NombreCompleto { get; set; } public string PasswordHash { get; set; } public string Rol { get; set; } public DateTime FechaNacimiento { get; set; } public string Telefono { get; set; } public string Info { get; set; } public string Especialidad { get; set; } public string FotoUrl { get; set; } public int Edad => DateTime.Now.Year - FechaNacimiento.Year; }
 public class Paciente { [Key] public int Id { get; set; } public string NombreCompleto { get; set; } public string IdLegal { get; set; } public int Edad { get; set; } public double Altura { get; set; } public double Peso { get; set; } public string Sexo { get; set; } public string Direccion { get; set; } public string Telefono { get; set; } public string EstadoCita { get; set; } = "Sin Cita"; public DateTime HoraCita { get; set; } public string DoctorAsignado { get; set; } public string HistoriaClinica { get; set; } }
 public class Examen { [Key] public int Id { get; set; } public string PacienteNombre { get; set; } public string TipoExamen { get; set; } public DateTime Fecha { get; set; } public string Estado { get; set; } = "Pendiente"; public bool EsCritico { get; set; } = false; public bool EsUrgente { get; set; } = false; public string DatosResultado { get; set; } public string DoctorSolicitanteId { get; set; } public string NombreDoctor { get; set; } public string ArchivoPdfUrl { get; set; } }
