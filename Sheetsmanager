@@ -1,0 +1,105 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Services;
+using Google.Apis.Sheets.v4;
+using Google.Apis.Sheets.v4.Data;
+
+public class SheetsManager
+{
+    // ✅ ID de la Hoja de Cálculo (Spreadsheet ID)
+    private const string SpreadsheetId = "1ffX6gpbiRA4k9u1FyOKVvVoNOpNKF46_BAMEmFFkaRQ";
+
+    // ✅ Nombre EXACTO de la pestaña
+    private const string NombrePestana = "Respuestas de formulario 1";
+
+    // ✅ Nombre del archivo JSON
+    private const string CredencialesFile = "axiomatic-lamp-480919-j6-35700ce67469 - copia.json";
+
+    private readonly SheetsService _service;
+
+    public SheetsManager()
+    {
+        _service = InicializarServicio();
+    }
+
+    private SheetsService InicializarServicio()
+    {
+        // ... (El código de inicialización es correcto y se mantiene igual) ...
+        GoogleCredential credential;
+
+        var path = Path.Combine(AppContext.BaseDirectory, CredencialesFile);
+
+        if (!File.Exists(path))
+            throw new FileNotFoundException($"Error FATAL: No se encontró el archivo JSON de credenciales en: {path}");
+
+        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
+        {
+            credential = GoogleCredential.FromStream(stream)
+                .CreateScoped(new[] { SheetsService.Scope.Spreadsheets });
+        }
+
+        return new SheetsService(new BaseClientService.Initializer()
+        {
+            HttpClientInitializer = credential,
+            ApplicationName = "SistemaCitasHospital",
+        });
+    }
+
+    // LECTURA: Obtiene todas las filas donde el campo "Estado" está vacío o dice "pendiente"
+    public List<Cita> ObtenerCitasPendientes()
+    {
+        // ⚠️ AJUSTE: Leemos hasta la COLUMNA I (que es la nueva columna de Estado)
+        string range = $"'{NombrePestana}'!A2:I";
+
+        SpreadsheetsResource.ValuesResource.GetRequest request = _service.Spreadsheets.Values.Get(SpreadsheetId, range);
+        ValueRange response = request.Execute();
+
+        IList<IList<object>> values = response.Values ?? new List<IList<object>>();
+        var listaCitas = new List<Cita>();
+
+        for (int i = 0; i < values.Count; i++)
+        {
+            var row = values[i];
+
+            // ⚠️ AJUSTE: El ESTADO ahora se lee de la COLUMNA I (índice 8)
+            string estadoActual = row.Count > 8 ? row[8]?.ToString() : "";
+
+            // Filtro de Lógica de Negocio: Solo si está pendiente o no tiene valor
+            if (string.IsNullOrWhiteSpace(estadoActual) || estadoActual.ToLower() == "pendiente")
+            {
+                listaCitas.Add(new Cita
+                {
+                    FilaHoja = i + 2,
+
+                    // La Columna H (7) es ahora la Especialidad
+                    FechaEnvio = DateTime.TryParse(row.Count > 0 ? row[0]?.ToString() : "", out var dt) ? dt : DateTime.MinValue,
+                    Email = row.Count > 1 ? row[1]?.ToString() : "",
+                    NombreCompleto = row.Count > 2 ? row[2]?.ToString() : "",
+                    DNI = row.Count > 3 ? row[3]?.ToString() : "",
+                    FechaCitaSolicitada = row.Count > 4 ? row[4]?.ToString() : "",
+                    Especialidad = row.Count > 7 ? row[7]?.ToString() : "",
+                    Estado = estadoActual // Leído de la Columna I
+                });
+            }
+        }
+        return listaCitas;
+    }
+
+    // ESCRITURA: Marca una fila específica como CONFIRMADA
+    public void MarcarCitaComoConfirmada(int filaHoja)
+    {
+        // ⚠️ AJUSTE: Escribimos el Estado en la COLUMNA I
+        string rangoActualizar = $"'{NombrePestana}'!I{filaHoja}";
+
+        ValueRange valueRange = new ValueRange
+        {
+            Values = new List<IList<object>> { new List<object> { "CONFIRMADO" } }
+        };
+
+        var request = _service.Spreadsheets.Values.Update(valueRange, SpreadsheetId, rangoActualizar);
+        request.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
+        request.Execute();
+    }
+}
