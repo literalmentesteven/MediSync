@@ -1,0 +1,33 @@
+using Microsoft.AspNetCore.Mvc;
+
+[ApiController]
+[Route("[controller]")]
+public class PruebaCitasController : ControllerBase
+{
+    [HttpGet("LeerCitas")]
+    public IActionResult LeerCitas()
+    {
+        try
+        {
+            var manager = new SheetsManager();
+            var nuevasCitas = manager.ObtenerCitasPendientes();
+
+            if (nuevasCitas == null || nuevasCitas.Count == 0)
+            {
+                return Ok(new { Mensaje = "Conexión exitosa, pero no se encontraron citas pendientes." });
+            }
+
+            // Si hay citas, devuelve el JSON de la primera cita para confirmar el mapeo
+            return Ok(new
+            {
+                Mensaje = $"Conexión y Lectura exitosa. Se encontraron {nuevasCitas.Count} citas pendientes.",
+                EjemploCita = nuevasCitas.First()
+            });
+        }
+        catch (Exception ex)
+        {
+            // Este error te dirá si falló el JSON, la clave o los permisos.
+            return StatusCode(500, new { Error = "Fallo de Conexión o Permisos", Detalle = ex.Message });
+        }
+    }
+}
