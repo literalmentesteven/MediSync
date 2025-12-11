@@ -1,0 +1,14 @@
+public class Cita
+{
+    // Las propiedades deben coincidir con las columnas de tu Google Sheet
+    public DateTime FechaEnvio { get; set; }
+    public string Email { get; set; }
+    public string NombreCompleto { get; set; }
+    public string DNI { get; set; }
+    public string FechaCitaSolicitada { get; set; }
+    public string Especialidad { get; set; }
+    public string Estado { get; set; }
+
+    // Propiedad auxiliar para saber qué fila actualizar
+    public int FilaHoja { get; set; }
+}
