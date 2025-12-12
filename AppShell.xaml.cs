@@ -1,4 +1,4 @@
-﻿using MediSync.Views;
+using MediSync.Views;
 using MediSync.Helpers;
 
 namespace MediSync;
@@ -8,64 +8,69 @@ public partial class AppShell : Shell
 	public AppShell()
 	{
 		InitializeComponent();
-        
-        // Configurar accesos según el rol del usuario logueado
-        ConfigureAccess();
+        ConfigureAccessControl();
 	}
 
-    private void ConfigureAccess()
+    /// <summary>
+    /// Configura la visibilidad de los módulos según el rol del usuario (RBAC).
+    /// </summary>
+    private void ConfigureAccessControl()
     {
         string rol = UserInfo.Rol;
 
-        // 1. Ocultar todo lo sensible por defecto
+        // Principio de Mínimo Privilegio: Ocultar módulos sensibles por defecto
         TabLabDoctor.IsVisible = false;
         TabLabStaff.IsVisible = false;
         
-        // 2. Lógica por Rol
-        
-        if (rol == "Administrador" || rol == "Superusuario")
+        switch (rol)
         {
-            // Admin ve Pacientes, Horarios, Doctores
-            TabPacientes.IsVisible = true;
-            TabHorarios.IsVisible = true;
-            TabDoctores.IsVisible = true;
-            
-            // Admin NO ve Laboratorio (a menos que sea Super)
-            if (rol == "Superusuario") 
-            {
-                TabLabDoctor.IsVisible = true; // Super puede ver resultados
-                TabLabStaff.IsVisible = true;  // Super puede gestionar lab
-            }
-        }
-        else if (rol == "Doctor")
-        {
-            // Doctor ve Pacientes, Horarios, Doctores y SU Laboratorio
-            TabPacientes.IsVisible = true;
-            TabHorarios.IsVisible = true;
-            TabDoctores.IsVisible = true;
-            TabLabDoctor.IsVisible = true; // Vista de resultados/pedidos
-        }
-        else if (rol == "Laboratorio")
-        {
-            // Personal Lab SOLO ve su gestión y su perfil
-            TabPacientes.IsVisible = false;
-            TabHorarios.IsVisible = false;
-            TabDoctores.IsVisible = false;
-            TabLabDoctor.IsVisible = false;
-            TabLabStaff.IsVisible = true; // Vista de trabajo
-            
-            // Forzar navegación inicial a su pestaña
-            this.CurrentItem = TabLabStaff;
+            case "Administrador":
+                // Gestión operativa clínica
+                TabPacientes.IsVisible = true;
+                TabHorarios.IsVisible = true;
+                TabDoctores.IsVisible = true;
+                break;
+
+            case "Superusuario":
+                // Acceso irrestricto (Admin + Lab + Clínica)
+                TabPacientes.IsVisible = true;
+                TabHorarios.IsVisible = true;
+                TabDoctores.IsVisible = true;
+                TabLabDoctor.IsVisible = true; 
+                TabLabStaff.IsVisible = true;  
+                break;
+
+            case "Doctor":
+                // Acceso a pacientes y visualización de resultados
+                TabPacientes.IsVisible = true;
+                TabHorarios.IsVisible = true;
+                TabDoctores.IsVisible = true;
+                TabLabDoctor.IsVisible = true; 
+                break;
+
+            case "Laboratorio":
+                // Entorno aislado de procesamiento de muestras
+                TabPacientes.IsVisible = false;
+                TabHorarios.IsVisible = false;
+                TabDoctores.IsVisible = false;
+                TabLabDoctor.IsVisible = false;
+                TabLabStaff.IsVisible = true; 
+                
+                // Redirección forzada al módulo de trabajo
+                this.CurrentItem = TabLabStaff;
+                break;
         }
     }
 
     private void OnLogoutClicked(object sender, EventArgs e)
     {
+        // Limpieza de sesión en memoria
         UserInfo.Token = "";
         UserInfo.Rol = "";
         UserInfo.NombreUsuario = "";
         UserInfo.IdUsuario = "";
         
+        // Reinicio de la pila de navegación
         var loginPage = App.Services.GetService<LoginPage>();
         if (Application.Current != null)
         {
