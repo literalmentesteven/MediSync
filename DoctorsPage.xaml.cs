@@ -25,8 +25,10 @@ public partial class DoctorsPage : ContentPage
     {
         try
         {
+            // Gestión de estado de carga
             LoadingSpinner.IsRunning = true;
             DoctorsCollection.IsVisible = false;
+            EmptyLabel.IsVisible = false;
 
             var docs = await _httpClient.GetFromJsonAsync<List<Usuario>>("api/doctores");
             
@@ -35,16 +37,16 @@ public partial class DoctorsPage : ContentPage
                 _doctores = new ObservableCollection<Usuario>(docs);
                 DoctorsCollection.ItemsSource = _doctores;
                 DoctorsCollection.IsVisible = true;
-                EmptyLabel.IsVisible = false;
             }
             else
             {
                 EmptyLabel.IsVisible = true;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            await DisplayAlert("Error", "No se pudieron cargar los doctores.", "OK");
+            await DisplayAlert("Error de Conexión", $"No se pudo obtener el directorio médico: {ex.Message}", "OK");
+            EmptyLabel.IsVisible = true;
         }
         finally
         {
@@ -59,13 +61,14 @@ public partial class DoctorsPage : ContentPage
 
         if (doctor != null)
         {
+            // Visualización rápida de contacto
             string mensaje = $"" +
                 $"📞 Teléfono: {doctor.Telefono}\n" +
                 $"🎂 Edad: {doctor.Edad} años\n" +
                 $"📅 Fecha Nac: {doctor.FechaNacimiento:dd/MM/yyyy}\n" +
                 $"🆔 ID Sistema: {doctor.IdUsuario}";
 
-            await DisplayAlert("Datos Privados", mensaje, "Cerrar");
+            await DisplayAlert($"Contacto: {doctor.NombreCompleto}", mensaje, "Cerrar");
         }
     }
 }
