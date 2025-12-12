@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Text.Json;
 using MediSync.Models;
 using MediSync.Helpers;
@@ -19,6 +19,7 @@ public partial class LoginPage : ContentPage
 
     private void OnPageLoaded(object sender, EventArgs e)
     {
+        // Animación ambiental del gradiente de fondo
         var animation = new Animation(v =>
         {
             BackgroundGradient.GradientStops[1].Offset = (float)v;
@@ -34,7 +35,7 @@ public partial class LoginPage : ContentPage
     {
         if (string.IsNullOrWhiteSpace(EntryUsuario.Text) || string.IsNullOrWhiteSpace(EntryPassword.Text))
         {
-            await DisplayAlert("Error", "Por favor ingrese usuario y contraseña", "OK");
+            await DisplayAlert("Validación", "Credenciales requeridas.", "OK");
             return;
         }
 
@@ -58,12 +59,13 @@ public partial class LoginPage : ContentPage
 
                 if (result != null)
                 {
+                    // Persistencia de sesión en memoria estática
                     UserInfo.Token = result.Token;
                     UserInfo.Rol = result.Rol;
                     UserInfo.NombreUsuario = result.NombreUsuario;
                     UserInfo.IdUsuario = EntryUsuario.Text;
 
-                    // CORRECCIÓN: Navegación estándar para .NET 9
+                    // Transición a la Shell principal
                     if (Application.Current != null)
                     {
                         Application.Current.Windows[0].Page = new AppShell();
@@ -72,12 +74,12 @@ public partial class LoginPage : ContentPage
             }
             else
             {
-                await DisplayAlert("Error", "Credenciales incorrectas", "OK");
+                await DisplayAlert("Acceso Denegado", "Usuario o contraseña incorrectos.", "OK");
             }
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Error de Conexión", $"No se pudo conectar con el servidor.\n{ex.Message}", "OK");
+            await DisplayAlert("Error de Conexión", $"No se pudo contactar al servidor de autenticación.\nDetalle: {ex.Message}", "OK");
         }
         finally
         {
