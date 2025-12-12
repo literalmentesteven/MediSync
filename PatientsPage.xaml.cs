@@ -13,27 +13,19 @@ public partial class PatientsPage : ContentPage
     private List<Usuario> _listaDoctores = new();
     private Paciente? _selectedPaciente;
     
-    // Flags para controlar qué estamos haciendo en el Modal
+    // Flags de Estado de UI
     private bool _isEditing = false;
-    private bool _isBooking = false; // True = Agendando Cita, False = Creando/Editando Paciente
+    private bool _isBooking = false;
 
     public PatientsPage() 
     {
         InitializeComponent();
         
-        // Inyección del HttpClient configurado
         var services = Application.Current?.Handler?.MauiContext?.Services;
         _httpClient = services?.GetService<HttpClient>() ?? new HttpClient { BaseAddress = new Uri("http://localhost:7151") };
 
-        // PERMISOS INICIALES: Botón "Nuevo Paciente" solo para Admin/Super
-        if (UserInfo.IsAdminOrSuper) 
-        {
-            BtnAddPatient.IsVisible = true;
-        }
-        else
-        {
-            BtnAddPatient.IsVisible = false;
-        }
+        // Configuración de visibilidad según privilegios
+        BtnAddPatient.IsVisible = UserInfo.IsAdminOrSuper;
     }
 
     private async void OnPageLoaded(object sender, EventArgs e) 
@@ -42,7 +34,7 @@ public partial class PatientsPage : ContentPage
         await CargarDoctoresParaPicker();
     }
 
-    // --- CARGA DE DATOS ---
+    #region Gestión de Datos y UI
 
     private async Task CargarPacientes()
     {
@@ -53,7 +45,7 @@ public partial class PatientsPage : ContentPage
             
             if (pacientes != null) 
             {
-                // FILTRO POR ROL: Si es Doctor, solo ver sus pacientes
+                // Filtro de privacidad: Doctores solo ven sus pacientes asignados
                 if (UserInfo.Rol == "Doctor")
                 {
                     pacientes = pacientes.Where(p => p.DoctorAsignado == UserInfo.NombreUsuario).ToList();
@@ -65,7 +57,7 @@ public partial class PatientsPage : ContentPage
         } 
         catch (Exception ex) 
         { 
-            await DisplayAlert("Error", $"No se pudieron cargar los pacientes: {ex.Message}", "OK"); 
+            await DisplayAlert("Error de Sincronización", $"Fallo al obtener listado de pacientes: {ex.Message}", "OK"); 
         }
     }
 
@@ -76,10 +68,8 @@ public partial class PatientsPage : ContentPage
             var docs = await _httpClient.GetFromJsonAsync<List<Usuario>>("api/doctores");
             if (docs != null) _listaDoctores = docs;
         } 
-        catch { }
+        catch { /* Fallo silencioso no crítico */ }
     }
-
-    // --- SELECCIÓN DE PACIENTE ---
 
     private void OnPatientSelected(object sender, SelectionChangedEventArgs e)
     {
@@ -102,17 +92,15 @@ public partial class PatientsPage : ContentPage
     {
         if (_selectedPaciente == null) return;
 
-        // 1. Datos Básicos
+        // Binding manual de datos demográficos
         LblNombre.Text = _selectedPaciente.NombreCompleto;
         LblIdLegal.Text = $"ID: {_selectedPaciente.IdLegal}";
         
-        // 2. Iniciales para el Avatar
         var parts = _selectedPaciente.NombreCompleto.Split(' ');
         string ini = parts.Length > 0 ? parts[0][0].ToString() : "";
         if (parts.Length > 1) ini += parts[1][0].ToString();
         LblIniciales.Text = ini.ToUpper();
 
-        // 3. Datos Médicos y Contacto
         LblEdad.Text = $"{_selectedPaciente.Edad} años";
         LblPeso.Text = $"{_selectedPaciente.Peso} kg";
         LblAltura.Text = $"{_selectedPaciente.Altura} m";
@@ -120,7 +108,7 @@ public partial class PatientsPage : ContentPage
         LblDireccion.Text = _selectedPaciente.Direccion;
         LblTelefono.Text = _selectedPaciente.Telefono;
 
-        // 4. Estado de la Cita y Doctor
+        // Lógica de Estado de Cita
         if (_selectedPaciente.EstadoCita == "Sin Cita")
         {
             LblDoctorAsignado.Text = "Ninguno";
@@ -128,7 +116,6 @@ public partial class PatientsPage : ContentPage
             LblEstado.Text = "SIN CITA"; 
             LblEstado.TextColor = Colors.Gray;
             
-            // Ocultar botones de asistencia si no hay cita
             BtnAsistio.IsVisible = false; 
             BtnAusente.IsVisible = false;
         }
@@ -137,7 +124,7 @@ public partial class PatientsPage : ContentPage
             LblDoctorAsignado.Text = _selectedPaciente.DoctorAsignado;
             LblEstado.Text = _selectedPaciente.EstadoCita.ToUpper();
             
-            // Colores según estado
+            // Feedback visual de estado
             if(_selectedPaciente.EstadoCita == "Asistió") 
             { 
                 BadgeEstado.BackgroundColor = Color.FromArgb("#E8F5E9"); 
@@ -154,87 +141,78 @@ public partial class PatientsPage : ContentPage
                 LblEstado.TextColor = Color.FromArgb("#FF9800"); 
             }
 
-            // Visibilidad botones asistencia (Solo si es pendiente y usuario autorizado)
+            // Regla de Negocio: Botones de asistencia solo activos si la cita es actual
+            // (Tolerancia de 30 minutos previos)
             bool esPendiente = _selectedPaciente.EstadoCita == "Pendiente";
-            bool puedeMarcar = UserInfo.IsAdminOrSuper; // Solo admins marcan asistencia
+            bool tienePermiso = UserInfo.IsAdminOrSuper; 
+            bool esHoraCita = DateTime.Now >= _selectedPaciente.HoraCita.AddMinutes(-30);
             
-            BtnAsistio.IsVisible = esPendiente && puedeMarcar;
-            BtnAusente.IsVisible = esPendiente && puedeMarcar;
+            BtnAsistio.IsVisible = esPendiente && tienePermiso && esHoraCita;
+            BtnAusente.IsVisible = esPendiente && tienePermiso && esHoraCita;
         }
 
-        // 5. Configurar Botón Historial (Texto y Color)
+        // Configuración de Historial
         if (string.IsNullOrWhiteSpace(_selectedPaciente.HistoriaClinica))
         {
             BtnHistory.Text = "📝 Crear Historial";
-            BtnHistory.BackgroundColor = Color.FromArgb("#FF9800"); // Naranja
+            BtnHistory.BackgroundColor = Color.FromArgb("#FF9800");
         }
         else
         {
             BtnHistory.Text = "📂 Acceder Historial";
-            BtnHistory.BackgroundColor = Color.FromArgb("#00B2CA"); // Cyan
+            BtnHistory.BackgroundColor = Color.FromArgb("#00B2CA");
         }
 
-        // 6. Permisos Generales de Edición
-        // Los doctores pueden ver pero no editar datos personales desde aquí
         BtnEditPatient.IsVisible = UserInfo.IsAdminOrSuper;
-        
-        // El historial solo lo ven Doctores y Superadmin
         BtnHistory.IsVisible = (UserInfo.Rol == "Doctor" || UserInfo.Rol == "Superusuario");
     }
 
-    // --- ACCIONES CRUD (MODAL PRINCIPAL) ---
+    #endregion
+
+    #region Lógica Transaccional (CRUD y Citas)
 
     private void LlenarPickerDoctores()
     {
         PickerDoctor.Items.Clear();
         foreach(var doc in _listaDoctores) 
-        {
             PickerDoctor.Items.Add(doc.NombreCompleto);
-        }
     }
 
-    // A. CREAR NUEVO PACIENTE (Desde cero)
     private void OnAddPatientClicked(object sender, EventArgs e)
     {
         _isEditing = false; 
         _isBooking = false;
         
-        ModalTitle.Text = "Nuevo Paciente";
-        TxtIdLegal.Text = "Automático"; // Se genera en backend
+        ModalTitle.Text = "Registro de Nuevo Paciente";
+        TxtIdLegal.Text = "Generación Automática"; 
         
-        // Limpiar campos
+        // Reset de formulario
         TxtNombre.Text = ""; TxtEdad.Text = ""; TxtPeso.Text = ""; TxtAltura.Text = ""; TxtDireccion.Text = ""; TxtTelefono.Text = "";
         PickerSexo.SelectedIndex = -1;
         
-        // Configurar UI: Mostrar datos paciente, Ocultar datos cita
         SectionPatientData.IsVisible = true;
         SectionCita.IsVisible = false;
-        
         ModalOverlay.IsVisible = true;
     }
 
-    // B. AGENDAR NUEVA CITA (Para paciente seleccionado)
     private void OnNewAppointmentClicked(object sender, EventArgs e)
     {
         if (_selectedPaciente == null) return;
         
         _isEditing = false; 
-        _isBooking = true; // Estamos en modo "Booking"
+        _isBooking = true; 
         
-        ModalTitle.Text = $"Cita para {_selectedPaciente.NombreCompleto}";
+        ModalTitle.Text = $"Programar Cita: {_selectedPaciente.NombreCompleto}";
         
         LlenarPickerDoctores();
         PickerDate.Date = DateTime.Now;
         PickerTime.Time = DateTime.Now.TimeOfDay;
 
-        // Configurar UI: Ocultar datos paciente, Mostrar datos cita
         SectionPatientData.IsVisible = false;
         SectionCita.IsVisible = true;
-        
         ModalOverlay.IsVisible = true;
     }
 
-    // C. EDITAR PACIENTE EXISTENTE
     private void OnEditPatientClicked(object sender, EventArgs e)
     {
         if (_selectedPaciente == null) return;
@@ -242,9 +220,8 @@ public partial class PatientsPage : ContentPage
         _isEditing = true; 
         _isBooking = false;
         
-        ModalTitle.Text = "Editar Registro";
+        ModalTitle.Text = "Actualizar Información";
 
-        // Llenar campos con datos actuales
         TxtNombre.Text = _selectedPaciente.NombreCompleto;
         TxtIdLegal.Text = _selectedPaciente.IdLegal;
         TxtEdad.Text = _selectedPaciente.Edad.ToString();
@@ -254,10 +231,8 @@ public partial class PatientsPage : ContentPage
         TxtTelefono.Text = _selectedPaciente.Telefono;
         PickerSexo.SelectedItem = _selectedPaciente.Sexo;
         
-        // Configurar UI: Mostrar datos paciente, Ocultar datos cita
         SectionPatientData.IsVisible = true;
         SectionCita.IsVisible = false; 
-        
         ModalOverlay.IsVisible = true;
     }
 
@@ -267,34 +242,31 @@ public partial class PatientsPage : ContentPage
     {
         try
         {
-            // CASO 1: AGENDAR CITA (Crear nuevo registro de tipo Cita copiando datos personales)
+            // CASO 1: AGENDAR CITA
             if (_isBooking) 
             {
                 if (PickerDoctor.SelectedIndex == -1) 
                 { 
-                    await DisplayAlert("Error", "Seleccione un doctor", "OK"); 
+                    await DisplayAlert("Validación", "Debe seleccionar un médico tratante.", "OK"); 
                     return; 
                 }
                 
                 DateTime fechaHora = PickerDate.Date + PickerTime.Time;
                 
-                // Creamos un nuevo objeto Paciente (Cita) copiando los datos del seleccionado
                 var nuevaCita = new Paciente
                 {
                     NombreCompleto = _selectedPaciente!.NombreCompleto,
-                    IdLegal = _selectedPaciente.IdLegal, // Mismo ID legal visual
+                    IdLegal = _selectedPaciente.IdLegal, 
                     Edad = _selectedPaciente.Edad, 
                     Peso = _selectedPaciente.Peso, 
                     Altura = _selectedPaciente.Altura, 
                     Sexo = _selectedPaciente.Sexo, 
                     Direccion = _selectedPaciente.Direccion, 
                     Telefono = _selectedPaciente.Telefono,
-                    
-                    // Datos nuevos de la cita
                     DoctorAsignado = PickerDoctor.SelectedItem.ToString(),
                     EstadoCita = "Pendiente",
                     HoraCita = fechaHora,
-                    HistoriaClinica = _selectedPaciente.HistoriaClinica // Mantiene historial
+                    HistoriaClinica = _selectedPaciente.HistoriaClinica
                 };
 
                 var response = await _httpClient.PostAsJsonAsync("api/pacientes", nuevaCita);
@@ -303,10 +275,25 @@ public partial class PatientsPage : ContentPage
                 { 
                     await CargarPacientes(); 
                     ModalOverlay.IsVisible = false; 
-                    await DisplayAlert("Éxito", "Cita Agendada Correctamente", "OK"); 
+                    await DisplayAlert("Éxito", "La cita ha sido agendada correctamente.", "Aceptar"); 
+                }
+                else
+                {
+                    // Manejo de Error 400 (Conflicto de Agenda)
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    try 
+                    {
+                        using var doc = JsonDocument.Parse(errorContent);
+                        string mensajeError = doc.RootElement.GetProperty("message").GetString();
+                        await DisplayAlert("Conflicto de Horario", mensajeError, "Entendido");
+                    }
+                    catch
+                    {
+                        await DisplayAlert("Error", "El servidor rechazó la solicitud.", "OK");
+                    }
                 }
             }
-            // CASO 2: EDITAR DATOS PACIENTE
+            // CASO 2: EDITAR PACIENTE
             else if (_isEditing && _selectedPaciente != null)
             {
                 if (string.IsNullOrWhiteSpace(TxtNombre.Text)) return;
@@ -315,7 +302,6 @@ public partial class PatientsPage : ContentPage
                 double.TryParse(TxtPeso.Text, out double peso); 
                 double.TryParse(TxtAltura.Text, out double altura);
 
-                // Actualizamos el objeto en memoria
                 _selectedPaciente.NombreCompleto = TxtNombre.Text;
                 _selectedPaciente.Edad = edad; 
                 _selectedPaciente.Peso = peso; 
@@ -330,10 +316,10 @@ public partial class PatientsPage : ContentPage
                 { 
                     UpdateDetailUI(); 
                     ModalOverlay.IsVisible = false; 
-                    await DisplayAlert("Éxito", "Datos actualizados", "OK"); 
+                    await DisplayAlert("Éxito", "Registro actualizado.", "OK"); 
                 }
             }
-            // CASO 3: CREAR NUEVO PACIENTE (SIN CITA INICIAL)
+            // CASO 3: NUEVO PACIENTE
             else
             {
                 if (string.IsNullOrWhiteSpace(TxtNombre.Text)) return;
@@ -351,8 +337,6 @@ public partial class PatientsPage : ContentPage
                     Sexo = PickerSexo.SelectedItem?.ToString() ?? "",
                     Direccion = TxtDireccion.Text, 
                     Telefono = TxtTelefono.Text,
-                    
-                    // Inicializar vacío/sin cita
                     DoctorAsignado = "",
                     EstadoCita = "Sin Cita",
                     HoraCita = DateTime.MinValue,
@@ -365,18 +349,17 @@ public partial class PatientsPage : ContentPage
                 { 
                     await CargarPacientes(); 
                     ModalOverlay.IsVisible = false; 
-                    await DisplayAlert("Éxito", "Paciente Registrado", "OK"); 
+                    await DisplayAlert("Éxito", "Paciente registrado en la base de datos.", "OK"); 
                 }
             }
         }
         catch (Exception ex) 
         { 
-            await DisplayAlert("Error", $"Ocurrió un error: {ex.Message}", "OK"); 
+            await DisplayAlert("Excepción", $"Error inesperado: {ex.Message}", "OK"); 
         }
     }
 
-    // --- ACCIONES RÁPIDAS (ASISTENCIA) ---
-
+    // Control de Asistencia
     private async void OnAsistioClicked(object sender, EventArgs e) => await ActualizarEstado("Asistió");
     private async void OnAusenteClicked(object sender, EventArgs e) => await ActualizarEstado("Ausente");
 
@@ -389,41 +372,29 @@ public partial class PatientsPage : ContentPage
         
         UpdateDetailUI();
         
-        // Truco para refrescar el color en la lista
         var index = _allPacientes.IndexOf(_selectedPaciente);
-        if(index >= 0) 
-        {
-            _allPacientes[index] = _selectedPaciente;
-        }
+        if(index >= 0) _allPacientes[index] = _selectedPaciente;
     }
-
-    // --- BÚSQUEDA ---
 
     private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(e.NewTextValue)) 
-        {
             PatientsList.ItemsSource = _allPacientes;
-        }
         else 
-        {
             PatientsList.ItemsSource = _allPacientes.Where(p => 
                 p.NombreCompleto.ToLower().Contains(e.NewTextValue.ToLower())
             ).ToList();
-        }
     }
 
-    // =================================================================
-    // GESTIÓN DE HISTORIAL MÉDICO (MODAL DEDICADO)
-    // =================================================================
+    #endregion
+
+    #region Gestión de Historial Médico (SOAP)
     
     private void OnHistoryClicked(object sender, EventArgs e)
     {
         if (_selectedPaciente == null) return;
-        
         LblHistoryPatientName.Text = $"Paciente: {_selectedPaciente.NombreCompleto}";
         TxtHistoryEditor.Text = _selectedPaciente.HistoriaClinica;
-        
         HistoryModalOverlay.IsVisible = true;
     }
 
@@ -436,56 +407,45 @@ public partial class PatientsPage : ContentPage
         try 
         {
             _selectedPaciente.HistoriaClinica = TxtHistoryEditor.Text;
-            
             var response = await _httpClient.PutAsJsonAsync($"api/pacientes/{_selectedPaciente.Id}", _selectedPaciente);
             
             if (response.IsSuccessStatusCode) 
             {
                 HistoryModalOverlay.IsVisible = false;
-                UpdateDetailUI(); // Para cambiar el color del botón a "Acceder"
-                await DisplayAlert("Éxito", "Expediente clínico guardado correctamente.", "OK");
+                UpdateDetailUI();
+                await DisplayAlert("Guardado", "Expediente clínico actualizado.", "OK");
             }
             else
             {
-                await DisplayAlert("Error", "No se pudo guardar el expediente.", "OK");
+                await DisplayAlert("Error", "No se pudo sincronizar el expediente.", "OK");
             }
         } 
         catch 
         { 
-            await DisplayAlert("Error", "Error de conexión con el servidor.", "OK"); 
+            await DisplayAlert("Error", "Error de comunicación con el servidor.", "OK"); 
         }
     }
 
-    // --- HERRAMIENTAS DEL EDITOR ---
-
     private void OnFontSizeChanged(object sender, ValueChangedEventArgs e)
     {
-        if (TxtHistoryEditor != null)
-            TxtHistoryEditor.FontSize = e.NewValue;
+        if (TxtHistoryEditor != null) TxtHistoryEditor.FontSize = e.NewValue;
     }
 
     private void OnFontChanged(object sender, EventArgs e)
     {
         if (TxtHistoryEditor == null || FontPicker.SelectedItem == null) return;
-
         var selection = FontPicker.SelectedItem as string;
-        if (selection == "Monospace (Código)") 
-            TxtHistoryEditor.FontFamily = "Monospace";
-        else if (selection == "Serif (Formal)") 
-            TxtHistoryEditor.FontFamily = "Serif";
-        else 
-            TxtHistoryEditor.FontFamily = "OpenSansRegular";
+        
+        TxtHistoryEditor.FontFamily = selection == "Monospace (Código)" ? "Monospace" : 
+                                      selection == "Serif (Formal)" ? "Serif" : 
+                                      "OpenSansRegular";
     }
 
-    private void OnInsertDate(object sender, EventArgs e)
-    {
-        string fecha = $"\n--- {DateTime.Now:dd/MM/yyyy HH:mm} ---\n";
-        TxtHistoryEditor.Text += fecha;
-    }
+    private void OnInsertDate(object sender, EventArgs e) => 
+        TxtHistoryEditor.Text += $"\n--- {DateTime.Now:dd/MM/yyyy HH:mm} ---\n";
 
-    private void OnInsertTemplate(object sender, EventArgs e)
-    {
-        string template = "\nS (Subjetivo): \nO (Objetivo): \nA (Análisis): \nP (Plan): \n";
-        TxtHistoryEditor.Text += template;
-    }
+    private void OnInsertTemplate(object sender, EventArgs e) => 
+        TxtHistoryEditor.Text += "\nS (Subjetivo): \nO (Objetivo): \nA (Análisis): \nP (Plan): \n";
+    
+    #endregion
 }
