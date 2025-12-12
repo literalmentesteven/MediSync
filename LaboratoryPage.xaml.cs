@@ -2,7 +2,7 @@ using MediSync.Models;
 using MediSync.Helpers;
 using System.Collections.ObjectModel;
 using System.Net.Http.Json;
-using Microsoft.Maui.ApplicationModel; // Necesario para el Launcher
+using Microsoft.Maui.ApplicationModel;
 
 namespace MediSync.Views;
 
@@ -12,7 +12,7 @@ public partial class LaboratoryPage : ContentPage
     private ObservableCollection<Examen> _allExamenes = new();
     private Examen? _selectedExam;
     
-    // LISTA PARA EL CHECKLIST
+    // Catálogo Maestro de Exámenes
     public ObservableCollection<TipoExamenCheck> TiposExamenes { get; set; } = new ObservableCollection<TipoExamenCheck>
     {
         new TipoExamenCheck { Nombre = "Hemograma Completo" },
@@ -27,7 +27,6 @@ public partial class LaboratoryPage : ContentPage
     {
         InitializeComponent();
         var services = Application.Current?.Handler?.MauiContext?.Services;
-        // NOTA: Si usas Android Emulator, recuerda que localhost es 10.0.2.2
         _httpClient = services?.GetService<HttpClient>() ?? new HttpClient { BaseAddress = new Uri("http://localhost:7151") };
         
         CheckListExams.ItemsSource = TiposExamenes;
@@ -44,6 +43,7 @@ public partial class LaboratoryPage : ContentPage
         try {
             var data = await _httpClient.GetFromJsonAsync<List<Examen>>("api/examenes");
             if (data != null) {
+                // Filtro: Doctores solo ven órdenes solicitadas por ellos mismos
                 if (UserInfo.Rol == "Doctor") data = data.Where(e => e.DoctorSolicitanteId == UserInfo.IdUsuario).ToList();
                 _allExamenes = new ObservableCollection<Examen>(data);
                 ExamsList.ItemsSource = _allExamenes;
@@ -71,10 +71,12 @@ public partial class LaboratoryPage : ContentPage
         EmptyState.IsVisible = false;
         ReportPanel.IsVisible = true;
 
+        // Binding de UI
         LblExamTitle.Text = _selectedExam.TipoExamen.ToUpper();
         LblPatientName.Text = $"Paciente: {_selectedExam.PacienteNombre}";
         LblDate.Text = _selectedExam.Fecha.ToString("dd/MM/yyyy");
 
+        // Gestión de Estados Visuales
         if (_selectedExam.Estado == "Pendiente") {
             PendingAlert.IsVisible = true;
             ResultsGrid.ItemsSource = null;
@@ -88,14 +90,13 @@ public partial class LaboratoryPage : ContentPage
             {
                 PdfAvailableAlert.IsVisible = true;
                 ResultsGrid.ItemsSource = null; 
-                // Cambiamos el texto para indicar acción externa
-                BtnPrint.Text = "📄 Abrir PDF Externo"; 
+                BtnPrint.Text = "📄 Abrir Documento Externo (PDF)"; 
             }
             else
             {
                 PdfAvailableAlert.IsVisible = false;
                 ParseAndShowResults(_selectedExam.DatosResultado, ResultsGrid);
-                BtnPrint.Text = "🖨️ Ver Hoja Impresa";
+                BtnPrint.Text = "🖨️ Visualizar Reporte Interno";
             }
             BtnPrint.IsVisible = true;
         }
@@ -115,11 +116,13 @@ public partial class LaboratoryPage : ContentPage
                 string resto = partes[1].Trim();
                 string valor = resto;
                 string referencia = "-";
+                
                 int idxPar = resto.IndexOf('(');
                 if (idxPar > -1) {
                     valor = resto.Substring(0, idxPar).Trim();
                     referencia = resto.Substring(idxPar).Replace("(", "").Replace(")", "").Trim();
                 }
+                
                 Color color = Colors.Black;
                 if (linea.Contains("[ALTO]") || linea.Contains("[BAJO]")) { 
                     color = Colors.Red; 
@@ -131,22 +134,19 @@ public partial class LaboratoryPage : ContentPage
         targetGrid.ItemsSource = lista;
     }
 
-    // =========================================================================
-    // MODIFICADO: Lógica para abrir PDF en navegador externo
-    // =========================================================================
     private async void OnPrintClicked(object sender, EventArgs e)
     {
         if (_selectedExam == null) return;
 
-        // CASO 1: Es un PDF (URL) -> Abrir en Navegador del Sistema
+        // MODO 1: Apertura de PDF Externo con Launcher nativo
         if (!string.IsNullOrEmpty(_selectedExam.ArchivoPdfUrl))
         {
             try
             {
                 string urlCompleta = _selectedExam.ArchivoPdfUrl;
-                string baseUrl = "http://localhost:7151"; // OJO: Cambiar a tu IP o 10.0.2.2 si es Android Emulator
+                string baseUrl = "http://localhost:7151"; 
 
-                // Si la URL es relativa (ej: "/pdf/archivo.pdf"), le pegamos el dominio
+                // Normalización de URL relativa
                 if (!urlCompleta.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                 {
                     if (urlCompleta.StartsWith("/"))
@@ -155,24 +155,21 @@ public partial class LaboratoryPage : ContentPage
                         urlCompleta = $"{baseUrl}/{urlCompleta}";
                 }
 
-                // Usamos Launcher para abrir el navegador predeterminado (Chrome, Edge, etc.)
                 await Launcher.Default.OpenAsync(new Uri(urlCompleta));
             }
             catch (Exception ex)
             {
-                await DisplayAlert("Error", $"No se pudo abrir el PDF: {ex.Message}", "OK");
+                await DisplayAlert("Error de Visualización", $"No se pudo iniciar el visor de PDF: {ex.Message}", "OK");
             }
         }
-        // CASO 2: Es un reporte generado (Datos texto) -> Usar el Modal Interno
+        // MODO 2: Generación de Reporte Interno
         else
         {
             PrintPreviewModal.IsVisible = true;
             
-            // Aseguramos que el WebView esté oculto y el contenedor nativo visible
             PdfViewer.IsVisible = false;
             DocumentContainer.IsVisible = true;
 
-            // Llenamos los datos del reporte manual
             DocPatientName.Text = _selectedExam.PacienteNombre.ToUpper();
             DocExamType.Text = _selectedExam.TipoExamen.ToUpper();
             DocDate.Text = _selectedExam.Fecha.ToString("dd/MM/yyyy HH:mm");
@@ -189,22 +186,18 @@ public partial class LaboratoryPage : ContentPage
         }
     }
 
-    private void ClosePrintModal(object sender, EventArgs e)
-    {
-        PrintPreviewModal.IsVisible = false;
-        PdfViewer.Source = "about:blank";
-    }
+    private void ClosePrintModal(object sender, EventArgs e) => PrintPreviewModal.IsVisible = false;
 
-    // --- NUEVA ORDEN ---
+    // --- Lógica de Nueva Orden ---
     private void OnNewOrderClicked(object sender, EventArgs e) => OrderModal.IsVisible = true;
     private void CloseOrderModal(object sender, EventArgs e) => OrderModal.IsVisible = false;
 
     private async void SendOrder(object sender, EventArgs e)
     {
-        if (PickerPatient.SelectedIndex == -1) { await DisplayAlert("Error", "Seleccione paciente", "OK"); return; }
+        if (PickerPatient.SelectedIndex == -1) { await DisplayAlert("Requerido", "Debe seleccionar un paciente.", "OK"); return; }
         
         var selectedExams = TiposExamenes.Where(x => x.IsSelected).ToList();
-        if (selectedExams.Count == 0) { await DisplayAlert("Error", "Seleccione al menos un examen", "OK"); return; }
+        if (selectedExams.Count == 0) { await DisplayAlert("Requerido", "Seleccione al menos un examen de la lista.", "OK"); return; }
 
         string paciente = PickerPatient.SelectedItem.ToString();
         bool urgente = CheckUrgente.IsChecked;
@@ -225,12 +218,14 @@ public partial class LaboratoryPage : ContentPage
 
         await CargarExamenes();
         OrderModal.IsVisible = false;
-        await DisplayAlert("Éxito", "Órdenes enviadas.", "OK");
+        await DisplayAlert("Enviado", "Las órdenes han sido transmitidas al laboratorio.", "Aceptar");
+        
         foreach(var t in TiposExamenes) t.IsSelected = false;
         CheckUrgente.IsChecked = false;
     }
     
-    private async void OnMarkReviewedClicked(object sender, EventArgs e) => await DisplayAlert("Revisado", "El examen ha sido archivado.", "OK");
+    private async void OnMarkReviewedClicked(object sender, EventArgs e) => await DisplayAlert("Archivado", "El examen ha sido marcado como revisado.", "OK");
+    
     private void OnSearchTextChanged(object sender, TextChangedEventArgs e) 
     {
         string filtro = e.NewTextValue?.ToLower() ?? "";
